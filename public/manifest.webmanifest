@@ -1,0 +1,18 @@
+{
+  "name": "Municipio Digital Cuatro Cañadas",
+  "short_name": "Municipio Digital",
+  "description": "Trámites y servicios del Gobierno Autónomo Municipal de Cuatro Cañadas.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#071247",
+  "lang": "es-BO",
+  "icons": [
+    {
+      "src": "/escudo-gamcc.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

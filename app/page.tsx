@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type InternalView = "inicio" | "hojas" | "contrataciones" | "agenda" | "transparencia";
 
@@ -41,6 +41,12 @@ export default function Home() {
   const [routeModal, setRouteModal] = useState<"form" | "success" | null>(null);
   const [routeFilter, setRouteFilter] = useState<"todos" | "pendientes" | "finalizados">("todos");
   const [routeSearch, setRouteSearch] = useState("");
+
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+    }
+  }, []);
 
   const visibleRoutes = useMemo(() => {
     const query = routeSearch.trim().toLowerCase();
