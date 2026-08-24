@@ -5,22 +5,55 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 type InternalView = "inicio" | "hojas" | "contrataciones" | "agenda" | "transparencia";
 
 const services = [
-  { number: "01", title: "Trámites municipales", description: "Inicia solicitudes, adjunta documentos y sigue cada paso.", color: "green" },
+  { number: "01", title: "Seguimiento digital", description: "Consulta el estado de tu hoja de ruta con el código de tu comprobante.", color: "green", target: "seguimiento" },
   { number: "02", title: "Impuestos y pagos", description: "Consulta obligaciones, pagos y comprobantes municipales.", color: "orange" },
-  { number: "03", title: "Salud y fichas", description: "Solicita una ficha de atención y consulta tu turno.", color: "blue" },
-  { number: "04", title: "Solicitar audiencia", description: "Pide una reunión y recibe la confirmación de Secretaría.", color: "violet" },
-  { number: "05", title: "Denuncias", description: "Reporta posibles hechos de corrupción de forma protegida.", color: "pink" },
+  { number: "03", title: "Ficha médica virtual", description: "Obtén una ficha de atención y consulta la información de tu turno.", color: "blue", target: "ficha-medica" },
+  { number: "04", title: "Requisitos y servicios", description: "Conoce requisitos, horarios y lugares de atención antes de acudir.", color: "violet" },
+  { number: "05", title: "Denuncia anónima", description: "Informa posibles hechos de corrupción mediante un canal protegido.", color: "pink", target: "denuncia" },
   { number: "06", title: "Transparencia", description: "Revisa presupuesto, obras, contrataciones y resultados.", color: "navy" },
 ] as const;
 
-const routes = [
+const fallbackRoutes = [
   { code: "HR-2026-00481", title: "Solicitud de spot para feria educativa", sender: "U.E. Nacional Cuatro Cañadas", unit: "Comunicación", status: "Urgente", due: "Vence hoy", tone: "danger" },
   { code: "HR-2026-00477", title: "Solicitud de mantenimiento de alumbrado", sender: "OTB 15 de Agosto", unit: "Obras Públicas", status: "En proceso", due: "2 días restantes", tone: "progress" },
   { code: "HR-2026-00469", title: "Solicitud de apoyo técnico productivo", sender: "Asociación de productores", unit: "Desarrollo Agropecuario", status: "Recibido", due: "3 días restantes", tone: "received" },
   { code: "HR-2026-00454", title: "Certificación de datos catastrales", sender: "María Elena Vargas", unit: "Catastro", status: "Finalizado", due: "Respondido hoy", tone: "done" },
 ] as const;
 
-type RouteItem = (typeof routes)[number];
+type RouteItem = {
+  id?: string;
+  code: string;
+  title: string;
+  description?: string | null;
+  sender: string;
+  unit: string;
+  unitCode?: string;
+  status: string;
+  state?: string;
+  priority?: string;
+  due: string;
+  tone: string;
+  createdAt?: string;
+  dueAt?: string | null;
+};
+
+type TrackingResult = {
+  code: string;
+  title: string;
+  description?: string | null;
+  sender: string;
+  unit: string;
+  status: string;
+  tone: string;
+  events: Array<{
+    id: string;
+    title: string;
+    description?: string | null;
+    unit?: string | null;
+    status: string;
+    createdAt: string;
+  }>;
+};
 
 const events = [
   { time: "08:30", title: "Reunión con directores", place: "Sala de Gabinete", color: "green" },
@@ -37,10 +70,17 @@ export default function Home() {
   const [internalView, setInternalView] = useState<InternalView>("inicio");
   const [notice, setNotice] = useState("");
   const [trackingCode, setTrackingCode] = useState("");
-  const [trackingResult, setTrackingResult] = useState("");
+  const [trackingResult, setTrackingResult] = useState<TrackingResult | null>(null);
+  const [trackingError, setTrackingError] = useState("");
+  const [trackingLoading, setTrackingLoading] = useState(false);
   const [routeModal, setRouteModal] = useState<"form" | "success" | null>(null);
   const [routeFilter, setRouteFilter] = useState<"todos" | "pendientes" | "finalizados">("todos");
   const [routeSearch, setRouteSearch] = useState("");
+  const [routeItems, setRouteItems] = useState<RouteItem[]>([...fallbackRoutes]);
+  const [routeLoading, setRouteLoading] = useState(false);
+  const [routeDataLive, setRouteDataLive] = useState(false);
+  const [routeRefresh, setRouteRefresh] = useState(0);
+  const [createdCode, setCreatedCode] = useState("");
 
   useEffect(() => {
     if ("serviceWorker" in navigator) {
@@ -48,14 +88,43 @@ export default function Home() {
     }
   }, []);
 
+  useEffect(() => {
+    if (portal !== "internal") return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setRouteLoading(true);
+      try {
+        const response = await fetch("/api/hojas-ruta", {
+          signal: controller.signal,
+          cache: "no-store",
+        });
+        if (!response.ok) throw new Error("No se pudo consultar la base de datos.");
+        const data = (await response.json()) as { items: RouteItem[] };
+        setRouteItems(data.items);
+        setRouteDataLive(true);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setRouteItems([...fallbackRoutes]);
+        setRouteDataLive(false);
+      } finally {
+        setRouteLoading(false);
+      }
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [portal, routeRefresh]);
+
   const visibleRoutes = useMemo(() => {
     const query = routeSearch.trim().toLowerCase();
-    return routes.filter((route) => {
+    return routeItems.filter((route) => {
       const matchesFilter = routeFilter === "todos" || (routeFilter === "finalizados" ? route.status === "Finalizado" : route.status !== "Finalizado");
       const matchesSearch = !query || `${route.code} ${route.title} ${route.sender}`.toLowerCase().includes(query);
       return matchesFilter && matchesSearch;
     });
-  }, [routeFilter, routeSearch]);
+  }, [routeFilter, routeItems, routeSearch]);
 
   function openCitizenPortal() {
     setPortal("citizen");
@@ -72,11 +141,25 @@ export default function Home() {
     setNotice(`${title}: este servicio se habilitará en la siguiente etapa.`);
   }
 
-  function submitTracking(event: FormEvent<HTMLFormElement>) {
+  async function submitTracking(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const code = trackingCode.trim() || "HR-2026-00481";
     setTrackingCode(code);
-    setTrackingResult(code.toUpperCase());
+    setTrackingResult(null);
+    setTrackingError("");
+    setTrackingLoading(true);
+    try {
+      const response = await fetch(`/api/seguimiento/${encodeURIComponent(code.toUpperCase())}`, {
+        cache: "no-store",
+      });
+      const data = (await response.json()) as { item?: TrackingResult; error?: string };
+      if (!response.ok || !data.item) throw new Error(data.error || "No se encontró la solicitud.");
+      setTrackingResult(data.item);
+    } catch (error) {
+      setTrackingError(error instanceof Error ? error.message : "No se pudo consultar el seguimiento.");
+    } finally {
+      setTrackingLoading(false);
+    }
   }
 
   if (portal === "internal") {
@@ -91,8 +174,17 @@ export default function Home() {
         search={routeSearch}
         setSearch={setRouteSearch}
         visibleRoutes={visibleRoutes}
+        allRoutes={routeItems}
+        routeLoading={routeLoading}
+        routeDataLive={routeDataLive}
         routeModal={routeModal}
         setRouteModal={setRouteModal}
+        createdCode={createdCode}
+        routeCreated={(code) => {
+          setCreatedCode(code);
+          setRouteModal("success");
+          setRouteRefresh((value) => value + 1);
+        }}
       />
     );
   }
@@ -107,9 +199,10 @@ export default function Home() {
           <span><strong>Municipio Digital</strong><small>Al servicio de nuestra gente</small></span>
         </button>
         <nav aria-label="Navegación principal">
+          <a href="#inicio">Inicio</a>
           <a href="#servicios">Servicios</a>
           <a href="#seguimiento">Seguimiento</a>
-          <a href="#como-funciona">Cómo funciona</a>
+          <a href="#denuncia">Denuncia anónima</a>
         </nav>
         <button className="employeeAccess" onClick={() => openInternal()}><span>◎</span> Acceso funcionarios</button>
       </header>
@@ -118,14 +211,15 @@ export default function Home() {
         <section className="hero" id="inicio">
           <i className="heroGlow one" /><i className="heroGlow two" />
           <div className="heroContent">
-            <div className="heroKicker"><i /> MUNICIPIO DIGITAL</div>
-            <h1>Tu municipio,<br /><em>más cerca.</em></h1>
-            <p>Realiza trámites, solicita servicios y sigue tus gestiones desde cualquier lugar, sin filas y con información clara.</p>
-            <div className="heroButtons">
-              <button className="heroPrimary" onClick={() => scrollToSection("servicios")}>Iniciar un trámite <span>→</span></button>
-              <button className="heroSecondary" onClick={() => scrollToSection("seguimiento")}>Consultar mi solicitud</button>
+            <div className="heroKicker"><i /> GOBIERNO AUTÓNOMO MUNICIPAL DE CUATRO CAÑADAS</div>
+            <h1><span>Una gestión</span><br /><em>para todos.</em></h1>
+            <p>Servicios e información municipal más cerca de la gente. Los trámites se registran en Secretaría General o en la unidad competente y pueden seguirse aquí con total claridad.</p>
+            <div className="heroMainActions">
+              <button className="heroPrimary" onClick={() => scrollToSection("seguimiento")}>Seguir mi trámite <span>→</span></button>
+              <button className="heroMedical" onClick={() => scrollToSection("ficha-medica")}><span>✚</span> Saca tu ficha médica virtual aquí <b>›</b></button>
+              <button className="heroReport" onClick={() => scrollToSection("denuncia")}><span>!</span> Denuncia corrupción de forma anónima <b>›</b></button>
             </div>
-            <div className="trustLine"><span>✓</span> Seguro y transparente <span>✓</span> Disponible las 24 horas</div>
+            <div className="trustLine"><span>✓</span> Seguimiento transparente <span>✓</span> Disponible las 24 horas</div>
           </div>
 
           <article className="heroCard" aria-label="Ejemplo de seguimiento de trámite">
@@ -146,10 +240,10 @@ export default function Home() {
         </section>
 
         <section className="serviceSection" id="servicios">
-          <div className="sectionHeading"><span>SERVICIOS EN LÍNEA</span><h2>¿Qué necesitas hacer?</h2><p>Elige un servicio para comenzar. Te guiaremos paso a paso.</p></div>
+          <div className="sectionHeading"><span>SERVICIOS DIGITALES</span><h2>El municipio más cerca de ti</h2><p>Consulta información, accede a servicios y realiza el seguimiento de gestiones ya registradas.</p></div>
           <div className="serviceGrid">
             {services.map((service) => (
-              <button className="serviceCard" key={service.number} onClick={() => showServiceNotice(service.title)}>
+              <button className="serviceCard" key={service.number} onClick={() => "target" in service ? scrollToSection(service.target) : showServiceNotice(service.title)}>
                 <span className={`serviceIcon ${service.color}`}>{service.number}</span><span className="serviceArrow">↗</span>
                 <h3>{service.title}</h3><p>{service.description}</p>
               </button>
@@ -159,22 +253,42 @@ export default function Home() {
 
         {notice && <div className="notice" role="status"><span>{notice}</span><button onClick={() => setNotice("")} aria-label="Cerrar aviso">×</button></div>}
 
+        <section className="priorityServices" aria-label="Servicios prioritarios">
+          <article className="priorityCard medicalCard" id="ficha-medica">
+            <div className="priorityIcon" aria-hidden="true">✚</div>
+            <div><span>SALUD MUNICIPAL</span><h2>Saca tu ficha médica virtual aquí</h2><p>Evita filas innecesarias y consulta la disponibilidad de atención médica desde tu celular.</p></div>
+            <button onClick={() => showServiceNotice("Ficha médica virtual")}>Acceder a fichas <span>→</span></button>
+          </article>
+          <article className="priorityCard reportCard" id="denuncia">
+            <div className="priorityIcon" aria-hidden="true">!</div>
+            <div><span>TRANSPARENCIA Y LUCHA CONTRA LA CORRUPCIÓN</span><h2>Denuncia anónima y protegida</h2><p>Reporta posibles hechos de corrupción sin publicar tu identidad. El canal especializado estará separado de los trámites administrativos.</p></div>
+            <button onClick={() => showServiceNotice("Denuncia anónima de corrupción")}>Ir al canal de denuncia <span>→</span></button>
+          </article>
+        </section>
+
         <section className="trackingSection" id="seguimiento">
-          <div className="trackingCopy"><span>SEGUIMIENTO DE SOLICITUDES</span><h2>¿Ya tienes un trámite?</h2><p>Ingresa el código que aparece en tu comprobante para conocer su estado y la unidad responsable.</p></div>
+          <div className="trackingCopy"><span>SEGUIMIENTO DIGITAL</span><h2>¿Tu trámite ya fue registrado?</h2><p>Ingresa el código entregado por Secretaría General o la unidad que recibió tu documentación para conocer su estado y responsable.</p></div>
           <form className="trackingForm" onSubmit={submitTracking}>
             <label htmlFor="tracking-code">Código de seguimiento</label>
-            <div><input id="tracking-code" value={trackingCode} onChange={(event) => setTrackingCode(event.target.value)} placeholder="Ej.: HR-2026-00481" /><button type="submit">Consultar <span>→</span></button></div>
-            <small>Para esta demostración puedes escribir cualquier código.</small>
+            <div><input id="tracking-code" value={trackingCode} onChange={(event) => setTrackingCode(event.target.value)} placeholder="Ej.: HR-2026-00481" /><button type="submit" disabled={trackingLoading}>{trackingLoading ? "Consultando…" : "Consultar"} <span>→</span></button></div>
+            <small>Consulta el código exacto entregado al registrar tu solicitud.</small>
           </form>
         </section>
 
         {trackingResult && (
-          <section className="trackingResult" aria-live="polite"><div><span className="resultCheck">✓</span><span><small>SOLICITUD ENCONTRADA</small><h3>{trackingResult}</h3><p>Solicitud de material audiovisual — Unidad de Comunicación</p></span></div><span className="liveBadge">En proceso</span></section>
+          <section className="trackingResult trackingResultLive" aria-live="polite">
+            <div><span className="resultCheck">✓</span><span><small>SOLICITUD ENCONTRADA · {trackingResult.code}</small><h3>{trackingResult.title}</h3><p>{trackingResult.sender} — {trackingResult.unit}</p></span></div>
+            <span className={`liveBadge ${trackingResult.tone}`}>{trackingResult.status}</span>
+            <div className="trackingEvents">
+              {trackingResult.events.map((event) => <article key={event.id}><i /><span><strong>{event.title}</strong><small>{event.description || event.unit || event.status}</small></span><time>{new Date(event.createdAt).toLocaleDateString("es-BO")}</time></article>)}
+            </div>
+          </section>
         )}
+        {trackingError && <p className="trackingError" role="alert">{trackingError}</p>}
 
         <section className="howSection" id="como-funciona">
-          <div className="sectionHeading"><span>SIMPLE Y TRANSPARENTE</span><h2>Tu solicitud en tres pasos</h2></div>
-          <div className="howGrid"><HowStep number="1" title="Presenta" text="Completa la solicitud y adjunta los documentos necesarios." /><HowStep number="2" title="Sigue" text="Recibe tu código y consulta cada avance en tiempo real." /><HowStep number="3" title="Recibe" text="Obtén la respuesta y tus documentos desde el portal." /></div>
+          <div className="sectionHeading"><span>SIMPLE Y TRANSPARENTE</span><h2>Tu trámite en tres pasos</h2></div>
+          <div className="howGrid"><HowStep number="1" title="Registra" text="Presenta tu documentación en Secretaría General o en la unidad municipal competente." /><HowStep number="2" title="Recibe tu código" text="Al registrar la gestión recibirás una hoja de ruta con un código único." /><HowStep number="3" title="Haz seguimiento" text="Consulta aquí cada avance hasta recibir la respuesta de la unidad responsable." /></div>
         </section>
       </main>
 
@@ -194,7 +308,7 @@ function HowStep({ number, title, text }: { number: string; title: string; text:
   return <div><b>{number}</b><h3>{title}</h3><p>{text}</p></div>;
 }
 
-function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, setFilter, search, setSearch, visibleRoutes, routeModal, setRouteModal }: {
+function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, setFilter, search, setSearch, visibleRoutes, allRoutes, routeLoading, routeDataLive, routeModal, setRouteModal, createdCode, routeCreated }: {
   view: InternalView;
   setView: (view: InternalView) => void;
   openCitizen: () => void;
@@ -204,8 +318,13 @@ function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, se
   search: string;
   setSearch: (value: string) => void;
   visibleRoutes: readonly RouteItem[];
+  allRoutes: readonly RouteItem[];
+  routeLoading: boolean;
+  routeDataLive: boolean;
   routeModal: "form" | "success" | null;
   setRouteModal: (value: "form" | "success" | null) => void;
+  createdCode: string;
+  routeCreated: (code: string) => void;
 }) {
   const titles: Record<InternalView, string> = { inicio: "Panel de gestión", hojas: "Hojas de ruta", contrataciones: "Contrataciones", agenda: "Agenda institucional", transparencia: "Transparencia" };
   return (
@@ -215,7 +334,7 @@ function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, se
         <div className="sideLabel">GESTIÓN MUNICIPAL</div>
         <nav className="sideNav" aria-label="Navegación interna">
           <SideButton active={view === "inicio"} icon="⌂" label="Inicio" onClick={() => setView("inicio")} />
-          <SideButton active={view === "hojas"} icon="↗" label="Hojas de ruta" badge="12" onClick={() => setView("hojas")} />
+          <SideButton active={view === "hojas"} icon="↗" label="Hojas de ruta" badge={String(allRoutes.length)} onClick={() => setView("hojas")} />
           <SideButton active={view === "contrataciones"} icon="▣" label="Contrataciones" onClick={() => setView("contrataciones")} />
           <SideButton active={view === "agenda"} icon="□" label="Agenda" onClick={() => setView("agenda")} />
           <SideButton active={view === "transparencia"} icon="◎" label="Transparencia" onClick={() => setView("transparencia")} />
@@ -224,14 +343,14 @@ function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, se
       </aside>
 
       <main className="internalMain">
-        <header className="internalHeader"><div><span className="sectionKicker">MUNICIPIO DIGITAL</span><h1>{titles[view]}</h1></div><div className="headerActions"><span className="demoPill"><i /> Prototipo · datos de prueba</span><button className="iconButton" aria-label="Notificaciones">●<span className="notificationDot" /></button><button className="portalLink" onClick={openCitizen}>Ver portal ciudadano</button></div></header>
-        {view === "inicio" && <Dashboard setView={setView} openRouteModal={openRouteModal} />}
-        {view === "hojas" && <RoutesModule openRouteModal={openRouteModal} filter={filter} setFilter={setFilter} search={search} setSearch={setSearch} visibleRoutes={visibleRoutes} />}
+        <header className="internalHeader"><div><span className="sectionKicker">MUNICIPIO DIGITAL</span><h1>{titles[view]}</h1></div><div className="headerActions"><span className={`demoPill ${routeDataLive ? "live" : ""}`}><i /> {routeDataLive ? "Neon · datos en vivo" : "Modo compatible · datos locales"}</span><button className="iconButton" aria-label="Notificaciones">●<span className="notificationDot" /></button><button className="portalLink" onClick={openCitizen}>Ver portal ciudadano</button></div></header>
+        {view === "inicio" && <Dashboard setView={setView} openRouteModal={openRouteModal} items={allRoutes} />}
+        {view === "hojas" && <RoutesModule openRouteModal={openRouteModal} filter={filter} setFilter={setFilter} search={search} setSearch={setSearch} visibleRoutes={visibleRoutes} allRoutes={allRoutes} loading={routeLoading} />}
         {view === "contrataciones" && <ProcurementModule openRouteModal={openRouteModal} />}
         {view === "agenda" && <AgendaModule />}
         {view === "transparencia" && <TransparencyModule />}
       </main>
-      {routeModal && <RouteModal mode={routeModal} close={() => setRouteModal(null)} succeed={() => setRouteModal("success")} />}
+      {routeModal && <RouteModal mode={routeModal} close={() => setRouteModal(null)} succeed={routeCreated} createdCode={createdCode} />}
     </div>
   );
 }
@@ -240,11 +359,14 @@ function SideButton({ active, icon, label, badge, onClick }: { active: boolean; 
   return <button className={active ? "active" : ""} onClick={onClick}><span className="navIcon">{icon}</span><span>{label}</span>{badge && <b>{badge}</b>}</button>;
 }
 
-function Dashboard({ setView, openRouteModal }: { setView: (view: InternalView) => void; openRouteModal: () => void }) {
+function Dashboard({ setView, openRouteModal, items }: { setView: (view: InternalView) => void; openRouteModal: () => void; items: readonly RouteItem[] }) {
+  const pendientes = items.filter((item) => item.status !== "Finalizado" && item.status !== "Archivado");
+  const finalizados = items.length - pendientes.length;
+  const urgentes = items.filter((item) => item.priority === "urgente").length;
   return <>
     <section className="welcomeRow"><div><p className="dateLine">jueves, 6 de agosto</p><h2>Buenos días, Saúl.</h2><p>Tienes <strong>3 asuntos prioritarios</strong> que requieren atención.</p></div><button className="primaryAction" onClick={openRouteModal}><span>＋</span>Nueva hoja de ruta</button></section>
-    <section className="statGrid" aria-label="Resumen del trabajo"><StatCard color="blue" label="En mi bandeja" value="12" note="3 nuevas hoy" /><StatCard color="orange" label="Por vencer" value="3" note="Requieren atención" /><StatCard color="green" label="Finalizadas este mes" value="28" note="+12% respecto a julio" /><StatCard color="violet" label="Tiempo promedio" value="2,4 d" note="Meta institucional: 5 días" /></section>
-    <div className="dashboardGrid"><section className="panel"><PanelHeader eyebrow="HOJA DE RUTA" title="Requieren tu atención" action="Ver toda la bandeja →" onClick={() => setView("hojas")} /><RouteList items={routes.slice(0, 3)} /></section><section className="panel agendaPanel"><PanelHeader eyebrow="AGENDA DEL ALCALDE" title="Hoy, 4 de agosto" action="↗" onClick={() => setView("agenda")} /><AgendaList /><button className="subtleAction" onClick={() => setView("agenda")}>＋ Agendar audiencia</button></section></div>
+    <section className="statGrid" aria-label="Resumen del trabajo"><StatCard color="blue" label="En mi bandeja" value={String(items.length)} note="Registros disponibles" /><StatCard color="orange" label="Prioridad urgente" value={String(urgentes)} note="Requieren atención" /><StatCard color="green" label="Finalizadas" value={String(finalizados)} note="En la bandeja actual" /><StatCard color="violet" label="Pendientes" value={String(pendientes.length)} note="En seguimiento" /></section>
+    <div className="dashboardGrid"><section className="panel"><PanelHeader eyebrow="HOJA DE RUTA" title="Requieren tu atención" action="Ver toda la bandeja →" onClick={() => setView("hojas")} /><RouteList items={pendientes.slice(0, 3)} /></section><section className="panel agendaPanel"><PanelHeader eyebrow="AGENDA DEL ALCALDE" title="Hoy, 4 de agosto" action="↗" onClick={() => setView("agenda")} /><AgendaList /><button className="subtleAction" onClick={() => setView("agenda")}>＋ Agendar audiencia</button></section></div>
     <section className="panel procurementPanel"><PanelHeader eyebrow="CONTRATACIÓN EN CURSO" title="Servicio de impresión — Invitaciones aniversario municipal" action="CM-2026-0038" onClick={() => setView("contrataciones")} /><div className="stepTrack"><ProcessStep complete number="✓" title="Necesidad registrada" note="Unidad de Comunicación" /><ProcessStep complete number="✓" title="Certificación presupuestaria" note="CP-2026-0184 aprobada" /><ProcessStep number="3" title="Inicio de contratación" note="Pendiente de visto bueno" /><ProcessStep number="4" title="Orden de servicio" note="Aún no iniciada" /></div></section>
   </>;
 }
@@ -269,8 +391,10 @@ function ProcessStep({ complete = false, number, title, note }: { complete?: boo
   return <div className={`processStep ${complete ? "complete" : ""}`}><div className="stepTop"><span>{number}</span><i /></div><strong>{title}</strong><small>{note}</small></div>;
 }
 
-function RoutesModule({ openRouteModal, filter, setFilter, search, setSearch, visibleRoutes }: { openRouteModal: () => void; filter: "todos" | "pendientes" | "finalizados"; setFilter: (value: "todos" | "pendientes" | "finalizados") => void; search: string; setSearch: (value: string) => void; visibleRoutes: readonly RouteItem[] }) {
-  return <section className="moduleView"><div className="moduleTitle"><div><h2>Bandeja de hojas de ruta</h2><p>Solicitudes recibidas y derivadas a tu unidad</p></div><button className="primaryAction" onClick={openRouteModal}><span>＋</span>Nueva hoja de ruta</button></div><div className="filterBar"><input aria-label="Buscar por código, asunto o remitente" placeholder="Buscar por código, asunto o remitente" value={search} onChange={(event) => setSearch(event.target.value)} /><button className={filter === "todos" ? "selected" : ""} onClick={() => setFilter("todos")}>Todos 12</button><button className={filter === "pendientes" ? "selected" : ""} onClick={() => setFilter("pendientes")}>Pendientes 7</button><button className={filter === "finalizados" ? "selected" : ""} onClick={() => setFilter("finalizados")}>Finalizados 5</button></div><section className="panel"><RouteList items={visibleRoutes} full /></section></section>;
+function RoutesModule({ openRouteModal, filter, setFilter, search, setSearch, visibleRoutes, allRoutes, loading }: { openRouteModal: () => void; filter: "todos" | "pendientes" | "finalizados"; setFilter: (value: "todos" | "pendientes" | "finalizados") => void; search: string; setSearch: (value: string) => void; visibleRoutes: readonly RouteItem[]; allRoutes: readonly RouteItem[]; loading: boolean }) {
+  const finalizados = allRoutes.filter((route) => route.status === "Finalizado" || route.status === "Archivado").length;
+  const pendientes = allRoutes.length - finalizados;
+  return <section className="moduleView"><div className="moduleTitle"><div><h2>Bandeja de hojas de ruta</h2><p>Solicitudes reales registradas y derivadas a las unidades municipales</p></div><button className="primaryAction" onClick={openRouteModal}><span>＋</span>Nueva hoja de ruta</button></div><div className="filterBar"><input aria-label="Buscar por código, asunto o remitente" placeholder="Buscar por código, asunto o remitente" value={search} onChange={(event) => setSearch(event.target.value)} /><button className={filter === "todos" ? "selected" : ""} onClick={() => setFilter("todos")}>Todos {allRoutes.length}</button><button className={filter === "pendientes" ? "selected" : ""} onClick={() => setFilter("pendientes")}>Pendientes {pendientes}</button><button className={filter === "finalizados" ? "selected" : ""} onClick={() => setFilter("finalizados")}>Finalizados {finalizados}</button></div><section className="panel">{loading ? <p className="loadingState">Actualizando hojas de ruta…</p> : <RouteList items={visibleRoutes} full />}</section></section>;
 }
 
 function ProcurementModule({ openRouteModal }: { openRouteModal: () => void }) {
@@ -289,7 +413,39 @@ function TransparencyModule() {
   return <section className="moduleView"><div className="moduleTitle"><div><h2>Transparencia municipal</h2><p>Información pública preparada para la ciudadanía</p></div><button className="primaryAction">Publicar actualización</button></div><section className="transparencyHero"><div><span>EJECUCIÓN PRESUPUESTARIA 2026</span><strong>62,8%</strong><p>Información demostrativa pendiente de conexión con la fuente oficial.</p></div><div className="donut"><span>63<small>%</small></span></div></section><div className="statGrid"><StatCard color="blue" label="Presupuesto vigente" value="Bs 84,2 M" note="Gestión 2026" /><StatCard color="green" label="Ejecutado" value="Bs 52,9 M" note="Al 4 de agosto" /><StatCard color="orange" label="Proyectos activos" value="38" note="12 con avance público" /><StatCard color="violet" label="Procesos publicados" value="117" note="Sincronización pendiente" /></div></section>;
 }
 
-function RouteModal({ mode, close, succeed }: { mode: "form" | "success"; close: () => void; succeed: () => void }) {
-  function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); succeed(); }
-  return <div className="modalBackdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) close(); }}>{mode === "success" ? <section className="routeModal successModal" role="dialog" aria-modal="true" aria-labelledby="success-title"><div className="successMark">✓</div><h2 id="success-title">Hoja de ruta registrada</h2><p>El registro fue creado correctamente con el código <strong>HR-2026-00482</strong> y derivado a la unidad seleccionada.</p><button className="primaryAction" onClick={close}>Volver al panel</button></section> : <form className="routeModal" onSubmit={submit} role="dialog" aria-modal="true" aria-labelledby="route-title"><header className="modalHeader"><div><span>NUEVO REGISTRO</span><h2 id="route-title">Crear hoja de ruta</h2></div><button type="button" onClick={close} aria-label="Cerrar">×</button></header><label>Remitente<input required placeholder="Nombre de la persona o institución" /></label><label>Asunto<textarea required rows={3} placeholder="Describe brevemente la solicitud" /></label><div className="formGrid"><label>Tipo<select><option>Solicitud externa</option><option>Comunicación interna</option><option>Solicitud de audiencia</option></select></label><label>Unidad de destino<select><option>Unidad de Comunicación</option><option>Obras Públicas</option><option>Catastro</option><option>Desarrollo Humano</option></select></label></div><label className="uploadField"><span>＋</span><strong>Adjuntar nota o documento</strong><small>PDF, JPG o PNG · Datos de demostración</small><input type="file" accept=".pdf,.jpg,.jpeg,.png" aria-label="Adjuntar nota o documento" /></label><div className="modalActions"><button type="button" onClick={close}>Cancelar</button><button className="primaryAction" type="submit">Registrar y derivar →</button></div></form>}</div>;
+function RouteModal({ mode, close, succeed, createdCode }: { mode: "form" | "success"; close: () => void; succeed: (code: string) => void; createdCode: string }) {
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitting(true);
+    setError("");
+    const form = new FormData(event.currentTarget);
+    try {
+      const response = await fetch("/api/hojas-ruta", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          remitente: form.get("remitente"),
+          asunto: form.get("asunto"),
+          descripcion: form.get("descripcion"),
+          tipo: form.get("tipo"),
+          prioridad: form.get("prioridad"),
+          unidadCodigo: form.get("unidadCodigo"),
+          documento: form.get("documento"),
+          telefono: form.get("telefono"),
+        }),
+      });
+      const data = (await response.json()) as { item?: { code: string }; error?: string };
+      if (!response.ok || !data.item) throw new Error(data.error || "No se pudo registrar la hoja de ruta.");
+      succeed(data.item.code);
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "No se pudo registrar la hoja de ruta.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return <div className="modalBackdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) close(); }}>{mode === "success" ? <section className="routeModal successModal" role="dialog" aria-modal="true" aria-labelledby="success-title"><div className="successMark">✓</div><h2 id="success-title">Hoja de ruta registrada</h2><p>El registro fue creado correctamente con el código <strong>{createdCode}</strong> y derivado a la unidad seleccionada.</p><button className="primaryAction" onClick={close}>Volver al panel</button></section> : <form className="routeModal" onSubmit={submit} role="dialog" aria-modal="true" aria-labelledby="route-title"><header className="modalHeader"><div><span>NUEVO REGISTRO</span><h2 id="route-title">Crear hoja de ruta</h2></div><button type="button" onClick={close} aria-label="Cerrar">×</button></header><label>Remitente<input name="remitente" required maxLength={220} placeholder="Nombre de la persona o institución" /></label><div className="formGrid"><label>Documento<input name="documento" maxLength={80} placeholder="CI, NIT o referencia" /></label><label>Teléfono<input name="telefono" maxLength={40} placeholder="Número de contacto" /></label></div><label>Asunto<input name="asunto" required maxLength={300} placeholder="Resumen de la solicitud" /></label><label>Descripción<textarea name="descripcion" rows={3} placeholder="Describe brevemente la solicitud" /></label><div className="formGrid"><label>Tipo<select name="tipo" defaultValue="solicitud_externa"><option value="solicitud_externa">Solicitud externa</option><option value="comunicacion_interna">Comunicación interna</option><option value="solicitud_audiencia">Solicitud de audiencia</option></select></label><label>Prioridad<select name="prioridad" defaultValue="normal"><option value="baja">Baja</option><option value="normal">Normal</option><option value="alta">Alta</option><option value="urgente">Urgente</option></select></label></div><label>Unidad de destino<select name="unidadCodigo" defaultValue="COM"><option value="COM">Unidad de Comunicación</option><option value="OBR">Obras Públicas</option><option value="CAT">Catastro</option><option value="DH">Desarrollo Humano</option><option value="DAP">Desarrollo Agropecuario</option></select></label>{error && <p className="formError" role="alert">{error}</p>}<div className="modalActions"><button type="button" onClick={close}>Cancelar</button><button className="primaryAction" type="submit" disabled={submitting}>{submitting ? "Registrando…" : "Registrar y derivar →"}</button></div></form>}</div>;
 }

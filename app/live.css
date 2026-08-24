@@ -1,0 +1,94 @@
+.demoPill.live {
+  color: #25751f;
+  background: #edf8e9;
+  border-color: #cfe9c9;
+}
+
+.demoPill.live i {
+  background: var(--green);
+}
+
+.loadingState,
+.emptyState,
+.formError,
+.trackingError {
+  color: var(--muted);
+  margin: 0;
+  padding: 24px;
+  font-size: 12px;
+  text-align: center;
+}
+
+.formError,
+.trackingError {
+  color: #b71d35;
+  background: #fff0f2;
+  border: 1px solid #ffd7dd;
+  border-radius: 12px;
+}
+
+.trackingError {
+  max-width: 760px;
+  margin: 16px auto 0;
+}
+
+.trackingResultLive {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 14px 20px;
+}
+
+.trackingEvents {
+  grid-column: 1 / -1;
+  border-top: 1px solid #dcebd8;
+  padding-top: 12px;
+}
+
+.trackingEvents article {
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  gap: 12px;
+  align-items: start;
+  padding: 9px 0;
+}
+
+.trackingEvents article i {
+  width: 9px;
+  height: 9px;
+  margin-top: 4px;
+  border-radius: 50%;
+  background: var(--green);
+}
+
+.trackingEvents article span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.trackingEvents article strong {
+  color: var(--navy);
+  font-size: 11px;
+}
+
+.trackingEvents article small,
+.trackingEvents article time {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+@media (max-width: 560px) {
+  .trackingResultLive {
+    grid-template-columns: 1fr;
+  }
+
+  .trackingResultLive > .liveBadge,
+  .trackingEvents {
+    grid-column: 1;
+  }
+}

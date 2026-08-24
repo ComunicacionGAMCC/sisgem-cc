@@ -1,11 +1,6 @@
 import assert from "node:assert/strict";
-import { access, readFile, readdir } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
-
-const developmentPreviewMeta =
-  /<meta(?=[^>]*\bname=["']codex-preview["'])(?=[^>]*\bcontent=["']development["'])[^>]*>/i;
-const templateRoot = new URL("../", import.meta.url);
-const previewRoot = new URL("../app/_sites-preview/", import.meta.url);
 
 async function render() {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
@@ -28,64 +23,57 @@ async function render() {
   );
 }
 
-test("server-renders the starter loading skeleton", async () => {
+test("server-renders the Municipio Digital portal", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
-  assert.match(html, developmentPreviewMeta);
-  assert.match(html, /<title>Your site is taking shape<\/title>/i);
-  assert.match(html, /Building your site/);
-  assert.match(html, /Your site is taking shape/);
-  assert.match(
-    html,
-    /Your first version will appear here automatically when it’s ready\./,
-  );
-  assert.doesNotMatch(html, /Codex/);
-  assert.match(html, /react-loading-skeleton/);
-  assert.match(html, /role="status"/);
+  assert.match(html, /Municipio Digital \| Cuatro Cañadas/);
+  assert.match(html, /Gobierno Autónomo Municipal de Cuatro Cañadas/);
+  assert.match(html, /id="seguimiento"/);
+  assert.match(html, /HR-2026-00481/);
+  assert.match(html, /Consulta el código exacto entregado/);
+  assert.match(html, /Saca tu ficha médica virtual aquí/);
+  assert.match(html, /Denuncia anónima y protegida/);
+  assert.match(html, /Secretaría General o en la unidad municipal competente/);
+  assert.doesNotMatch(html, /Iniciar un trámite/);
+  assert.doesNotMatch(html, /DATABASE_URL|postgresql:\/\//i);
 });
 
-test("keeps the loading skeleton scoped and disposable", async () => {
-  const [preview, css, page, layout, packageJson, files] = await Promise.all([
-    readFile(new URL("SkeletonPreview.tsx", previewRoot), "utf8"),
-    readFile(new URL("preview.css", previewRoot), "utf8"),
+test("keeps Neon lazy and ChatGPT Sites build-compatible", async () => {
+  const [page, dbIndex, schema, listApi, trackingApi, hosting] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../package.json", import.meta.url), "utf8"),
-    readdir(previewRoot),
+    readFile(new URL("../db/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/hojas-ruta/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/seguimiento/[codigo]/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
   ]);
 
-  assert.deepEqual(files.sort(), ["SkeletonPreview.tsx", "preview.css"]);
-  assert.match(preview, /from "react-loading-skeleton"/);
-  assert.match(preview, /baseColor="#eceae7"/);
-  assert.match(preview, /highlightColor="#f9f8f6"/);
-  assert.match(preview, /duration=\{2\.8\}/);
-  assert.match(preview, /sites-skeleton-search-placeholder/);
-  assert.match(packageJson, /"react-loading-skeleton": "3\.5\.0"/);
+  assert.match(page, /fetch\("\/api\/hojas-ruta"/);
+  assert.match(page, /\/api\/seguimiento\//);
+  assert.match(page, /Neon · datos en vivo/);
+  assert.match(listApi, /export async function GET/);
+  assert.match(listApi, /export async function POST/);
+  assert.match(trackingApi, /obtenerSeguimiento/);
+  assert.match(dbIndex, /let database: ReturnType<typeof createDb> \| null = null/);
+  assert.match(dbIndex, /if \(!database\) database = createDb\(\)/);
+  assert.doesNotMatch(dbIndex, /neon\(process\.env\.DATABASE_URL!/);
 
-  const shellIndex = preview.indexOf('className="sites-skeleton-shell"');
-  const statusIndex = preview.indexOf('className="sites-skeleton-status"');
-  assert.ok(shellIndex >= 0 && statusIndex > shellIndex);
-  assert.match(css, /position:\s*fixed/);
-  assert.match(css, /inset:\s*0/);
-  assert.match(css, /opacity:\s*0\.52/);
-  assert.match(css, /prefers-reduced-motion:\s*reduce/);
-  assert.doesNotMatch(css, /#020617|canvas|pets|progress/i);
-  assert.doesNotMatch(
-    preview,
-    /loading-spinner|status-mark|status-progress|canvas|cookie|random/i,
-  );
+  for (const table of [
+    "unidades",
+    "funcionarios",
+    "solicitantes",
+    "hojas_de_ruta",
+    "derivaciones",
+    "eventos_seguimiento",
+    "auditoria",
+  ]) {
+    assert.match(schema, new RegExp(`"${table}"`));
+  }
 
-  assert.match(page, /export const metadata:\s*Metadata/);
-  assert.match(page, /"codex-preview": "development"/);
-  assert.match(page, /<SkeletonPreview \/>/);
-  assert.match(layout, /title:\s*"Starter Project"/);
-  assert.doesNotMatch(layout, /codex-preview|_sites-preview|themeColor|\bViewport\b/);
-  assert.doesNotMatch(css, /(^|\s)(html|body)\s*\{/m);
-
-  await assert.rejects(
-    access(new URL("public/_sites-preview", templateRoot)),
-  );
+  assert.match(hosting, /"project_id"/);
+  assert.match(hosting, /"d1": null/);
+  assert.doesNotMatch(`${page}\n${dbIndex}\n${schema}`, /postgresql:\/\//i);
 });
