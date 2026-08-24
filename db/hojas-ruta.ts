@@ -53,13 +53,18 @@ function textoVencimiento(fechaLimite: Date | null, estado: keyof typeof estadoE
 export async function listarHojasDeRuta({
   buscar = "",
   filtro = "todos",
+  unidadIds = null,
 }: {
   buscar?: string;
   filtro?: FiltroHojas;
+  unidadIds?: string[] | null;
 }) {
   const db = getDb();
   const condiciones = [];
   const termino = buscar.trim();
+
+  if (unidadIds && unidadIds.length === 0) return [];
+  if (unidadIds) condiciones.push(inArray(hojasDeRuta.unidadActualId, unidadIds));
 
   if (termino) {
     condiciones.push(

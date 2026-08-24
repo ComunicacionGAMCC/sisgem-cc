@@ -1,12 +1,28 @@
-# vinext-starter
+# SIGEM Cuatro Cañadas
 
-A clean full-stack starter running on
-[vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
-Drizzle support.
+Sistema de gestión del Gobierno Autónomo Municipal de Cuatro Cañadas, con portal
+ciudadano, gestión interna, seguimiento de hojas de ruta y módulo independiente
+del Hospital Municipal.
 
 ## Prerequisites
 
 - Node.js `>=22.13.0`
+
+## Accesos institucionales
+
+- `super_admin`: administración global de plataforma. La primera cuenta se activa
+  una sola vez para Saúl Janco mediante el procedimiento seguro del servidor.
+- `sigem_admin`: administración del SIGEM para Jefatura de Sistemas y Recursos
+  Humanos, con asignaciones limitadas por unidad municipal.
+- `health_admin`: administración exclusiva del módulo de Salud; crea accesos para
+  admisión, médicos, enfermería, farmacia y auditoría.
+- `health_admission`: registra pacientes por primera vez y gestiona fichas de
+  atención sin acceso clínico irrestricto.
+- Todos los perfiles administrativos y clínicos requieren segundo factor. Los
+  permisos se validan en el servidor, tienen ámbito y dejan auditoría.
+
+Las cuentas se crean por invitación. No se guardan ni se comparten contraseñas
+provisionales en el repositorio.
 
 ## Quick Start
 

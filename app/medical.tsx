@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { useAccess } from "./access";
 
 type Specialty = {
   id: string;
@@ -219,6 +220,7 @@ export function MedicalBookingCard() {
 }
 
 export function MedicalModule() {
+  const access = useAccess();
   const [data, setData] = useState<MedicalData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -264,6 +266,8 @@ export function MedicalModule() {
         <article><span>Especialidades</span><strong>{data.specialties.length}</strong><small>Con agenda habilitada</small></article>
       </section>
 
+      {access.hasPermission("health.patients.register") && <PatientRegistry />}
+
       <section className="panel medicalAgendaPanel">
         <header className="medicalPanelHeader"><div><span>DISPONIBILIDAD</span><h3>Agenda de los próximos días</h3></div><small>Los cupos se descuentan al emitir cada ficha</small></header>
         <div className="availabilityTable">
@@ -305,5 +309,73 @@ export function MedicalModule() {
         <p className="privacyBanner"><b>Privacidad activa.</b> {data.privacy}</p>
       </section>
     </div>
+  );
+}
+
+type RegisteredPatient = {
+  id: string;
+  clinicalNumber: number;
+  fullName: string;
+  documentNumber: string;
+  alreadyRegistered: boolean;
+};
+
+function PatientRegistry() {
+  const access = useAccess();
+  const [open, setOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [message, setMessage] = useState("");
+  const [patient, setPatient] = useState<RegisteredPatient | null>(null);
+
+  async function registerPatient(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    setSubmitting(true);
+    setMessage("");
+    setPatient(null);
+    const { data, error } = await access.client.rpc("health_register_patient", {
+      patient_document_type: form.get("documentType"),
+      patient_document_number: form.get("documentNumber"),
+      patient_full_name: form.get("fullName"),
+      patient_birth_date: form.get("birthDate") || null,
+      patient_sex: form.get("sex") || null,
+      patient_phone: form.get("phone") || null,
+      patient_address: form.get("address") || null,
+      patient_emergency_contact: null,
+    });
+    setSubmitting(false);
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+    const result = data as unknown as RegisteredPatient;
+    setPatient(result);
+    setMessage(result.alreadyRegistered
+      ? "El paciente ya estaba registrado; no se creó un duplicado."
+      : "Paciente registrado correctamente en el Hospital Municipal.");
+    if (!result.alreadyRegistered) event.currentTarget.reset();
+  }
+
+  return (
+    <section className="panel patientRegistryPanel">
+      <header className="medicalPanelHeader">
+        <div><span>ADMISIÓN HOSPITALARIA</span><h3>Registro inicial de pacientes</h3></div>
+        <button className="medicalPrimary" onClick={() => setOpen((value) => !value)}>{open ? "Cerrar formulario" : "+ Registrar paciente"}</button>
+      </header>
+      <div className="patientRegistryIntro"><b>Historia clínica única</b><p>Admisión o Secretaría registra al paciente una sola vez. El sistema detecta documentos duplicados y asigna automáticamente el número de historia clínica.</p></div>
+      {open && <form className="patientRegistryForm" onSubmit={registerPatient}>
+        <div className="patientRegistryGrid">
+          <label>Tipo de documento<select name="documentType" defaultValue="CI"><option value="CI">Cédula de identidad</option><option value="CN">Certificado de nacimiento</option><option value="PASAPORTE">Pasaporte</option><option value="SIN_DOCUMENTO">Sin documento</option></select></label>
+          <label>Número de documento<input name="documentNumber" required minLength={4} /></label>
+          <label className="wide">Nombre completo<input name="fullName" required minLength={5} /></label>
+          <label>Fecha de nacimiento<input name="birthDate" type="date" max={new Date().toISOString().slice(0, 10)} /></label>
+          <label>Sexo<select name="sex" defaultValue=""><option value="">No especificado</option><option value="F">Femenino</option><option value="M">Masculino</option><option value="OTRO">Otro</option></select></label>
+          <label>Teléfono<input name="phone" inputMode="tel" /></label>
+          <label className="wide">Dirección<input name="address" /></label>
+        </div>
+        {message && <p className={`patientRegistryMessage ${patient?.alreadyRegistered ? "existing" : ""}`}>{message}{patient && <span>Historia clínica N.º {patient.clinicalNumber} · {patient.fullName} · CI {patient.documentNumber}</span>}</p>}
+        <footer><button type="button" onClick={() => setOpen(false)}>Cancelar</button><button className="medicalPrimary" disabled={submitting}>{submitting ? "Registrando…" : "Crear historia clínica"}</button></footer>
+      </form>}
+    </section>
   );
 }

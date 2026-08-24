@@ -1,9 +1,10 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { AccessGate, AccessManagement, AccessProvider, useAccess } from "./access";
 import { MedicalBookingCard, MedicalModule } from "./medical";
 
-type InternalView = "inicio" | "hojas" | "fichas" | "contrataciones" | "agenda" | "transparencia";
+type InternalView = "inicio" | "hojas" | "fichas" | "accesos" | "contrataciones" | "agenda" | "transparencia";
 
 const services = [
   { number: "01", title: "Seguimiento digital", description: "Consulta el estado de tu hoja de ruta con el código de tu comprobante.", color: "green", target: "seguimiento" },
@@ -67,6 +68,11 @@ function scrollToSection(id: string) {
 }
 
 export default function Home() {
+  return <AccessProvider><HomeContent /></AccessProvider>;
+}
+
+function HomeContent() {
+  const access = useAccess();
   const [portal, setPortal] = useState<"citizen" | "internal">("citizen");
   const [internalView, setInternalView] = useState<InternalView>("inicio");
   const [notice, setNotice] = useState("");
@@ -90,7 +96,8 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (portal !== "internal") return;
+    if (portal !== "internal" || !access.session || !access.hasPermission("sigem.routes.read")) return;
+    const accessToken = access.session.access_token;
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setRouteLoading(true);
@@ -98,6 +105,7 @@ export default function Home() {
         const response = await fetch("/api/hojas-ruta", {
           signal: controller.signal,
           cache: "no-store",
+          headers: { Authorization: `Bearer ${accessToken}` },
         });
         if (!response.ok) throw new Error("No se pudo consultar la base de datos.");
         const data = (await response.json()) as { items: RouteItem[] };
@@ -116,7 +124,7 @@ export default function Home() {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [portal, routeRefresh]);
+  }, [access, portal, routeRefresh]);
 
   const visibleRoutes = useMemo(() => {
     const query = routeSearch.trim().toLowerCase();
@@ -164,12 +172,22 @@ export default function Home() {
   }
 
   if (portal === "internal") {
+    const accessReady = Boolean(
+      access.session && access.context && !access.needsPassword
+      && (!access.context.mfaRequired || access.context.assuranceLevel === "aal2"),
+    );
+    if (!accessReady) return <AccessGate onBack={openCitizenPortal} />;
+    const authorizedView = internalView === "inicio"
+      && !access.hasPermission("sigem.routes.read")
+      && access.hasPermission("health.appointments.read")
+      ? "fichas"
+      : internalView;
     return (
       <InternalPortal
-        view={internalView}
+        view={authorizedView}
         setView={setInternalView}
         openCitizen={openCitizenPortal}
-        openRouteModal={() => setRouteModal("form")}
+        openRouteModal={() => access.hasPermission("sigem.routes.create") && setRouteModal("form")}
         filter={routeFilter}
         setFilter={setRouteFilter}
         search={routeSearch}
@@ -323,7 +341,10 @@ function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, se
   createdCode: string;
   routeCreated: (code: string) => void;
 }) {
-  const titles: Record<InternalView, string> = { inicio: "Panel de gestión", hojas: "Hojas de ruta", fichas: "Fichas médicas", contrataciones: "Contrataciones", agenda: "Agenda institucional", transparencia: "Transparencia" };
+  const access = useAccess();
+  const titles: Record<InternalView, string> = { inicio: "Panel de gestión", hojas: "Hojas de ruta", fichas: "Fichas médicas", accesos: "Usuarios y accesos", contrataciones: "Contrataciones", agenda: "Agenda institucional", transparencia: "Transparencia" };
+  const canManageUsers = access.hasPermission("platform.users.manage") || access.hasPermission("sigem.users.manage") || access.hasPermission("health.users.manage");
+  const initials = access.context?.profile.fullName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "US";
   return (
     <div className="internalShell">
       <aside className="sidebar">
@@ -331,20 +352,22 @@ function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, se
         <div className="sideLabel">GESTIÓN MUNICIPAL</div>
         <nav className="sideNav" aria-label="Navegación interna">
           <SideButton active={view === "inicio"} icon="⌂" label="Inicio" onClick={() => setView("inicio")} />
-          <SideButton active={view === "hojas"} icon="↗" label="Hojas de ruta" badge={String(allRoutes.length)} onClick={() => setView("hojas")} />
-          <SideButton active={view === "fichas"} icon="✚" label="Fichas médicas" onClick={() => setView("fichas")} />
-          <SideButton active={view === "contrataciones"} icon="▣" label="Contrataciones" onClick={() => setView("contrataciones")} />
-          <SideButton active={view === "agenda"} icon="□" label="Agenda" onClick={() => setView("agenda")} />
-          <SideButton active={view === "transparencia"} icon="◎" label="Transparencia" onClick={() => setView("transparencia")} />
+          {access.hasPermission("sigem.routes.read") && <SideButton active={view === "hojas"} icon="↗" label="Hojas de ruta" badge={String(allRoutes.length)} onClick={() => setView("hojas")} />}
+          {access.hasPermission("health.appointments.read") && <SideButton active={view === "fichas"} icon="✚" label="Fichas médicas" onClick={() => setView("fichas")} />}
+          {canManageUsers && <SideButton active={view === "accesos"} icon="♙" label="Usuarios y accesos" onClick={() => setView("accesos")} />}
+          {access.hasPermission("sigem.routes.read") && <SideButton active={view === "contrataciones"} icon="▣" label="Contrataciones" onClick={() => setView("contrataciones")} />}
+          {access.hasPermission("sigem.routes.read") && <SideButton active={view === "agenda"} icon="□" label="Agenda" onClick={() => setView("agenda")} />}
+          {access.hasPermission("sigem.reports.read") && <SideButton active={view === "transparencia"} icon="◎" label="Transparencia" onClick={() => setView("transparencia")} />}
         </nav>
-        <div className="sidebarFooter"><span className="avatar small">SC</span><div><strong>Saúl Cabrera</strong><span>Unidad de Comunicación</span></div><button aria-label="Opciones de cuenta">•••</button></div>
+        <div className="sidebarFooter"><span className="avatar small">{initials}</span><div><strong>{access.context?.profile.fullName}</strong><span>{access.context?.profile.jobTitle || access.context?.roles[0]?.name}</span></div><button onClick={access.signOut} aria-label="Cerrar sesión">↪</button></div>
       </aside>
 
       <main className="internalMain">
-        <header className="internalHeader"><div><span className="sectionKicker">MUNICIPIO DIGITAL</span><h1>{titles[view]}</h1></div><div className="headerActions"><span className={`demoPill ${routeDataLive ? "live" : ""}`}><i /> {routeDataLive ? "Neon · datos en vivo" : "Modo compatible · datos locales"}</span><button className="iconButton" aria-label="Notificaciones">●<span className="notificationDot" /></button><button className="portalLink" onClick={openCitizen}>Ver portal ciudadano</button></div></header>
+        <header className="internalHeader"><div><span className="sectionKicker">MUNICIPIO DIGITAL</span><h1>{titles[view]}</h1></div><div className="headerActions"><span className="demoPill live" title={routeDataLive ? "Datos municipales conectados" : "Acceso institucional verificado"}><i /> Acceso protegido · 2FA</span><button className="iconButton" aria-label="Notificaciones">●<span className="notificationDot" /></button><button className="portalLink" onClick={openCitizen}>Ver portal ciudadano</button></div></header>
         {view === "inicio" && <Dashboard setView={setView} openRouteModal={openRouteModal} items={allRoutes} />}
         {view === "hojas" && <RoutesModule openRouteModal={openRouteModal} filter={filter} setFilter={setFilter} search={search} setSearch={setSearch} visibleRoutes={visibleRoutes} allRoutes={allRoutes} loading={routeLoading} />}
         {view === "fichas" && <MedicalModule />}
+        {view === "accesos" && <AccessManagement />}
         {view === "contrataciones" && <ProcurementModule openRouteModal={openRouteModal} />}
         {view === "agenda" && <AgendaModule />}
         {view === "transparencia" && <TransparencyModule />}
@@ -413,6 +436,7 @@ function TransparencyModule() {
 }
 
 function RouteModal({ mode, close, succeed, createdCode }: { mode: "form" | "success"; close: () => void; succeed: (code: string) => void; createdCode: string }) {
+  const access = useAccess();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -424,7 +448,10 @@ function RouteModal({ mode, close, succeed, createdCode }: { mode: "form" | "suc
     try {
       const response = await fetch("/api/hojas-ruta", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${access.session?.access_token ?? ""}`,
+        },
         body: JSON.stringify({
           remitente: form.get("remitente"),
           asunto: form.get("asunto"),

@@ -4,6 +4,7 @@ import "./globals.css";
 import "./live.css";
 import "./premium-theme.css";
 import "./medical.css";
+import "./access.css";
 
 const baseMetadata: Metadata = {
   title: "Municipio Digital | Cuatro Cañadas",

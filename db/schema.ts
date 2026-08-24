@@ -1,6 +1,5 @@
 import {
   boolean,
-  date,
   index,
   integer,
   jsonb,
@@ -12,7 +11,6 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
 
 const auditColumns = {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

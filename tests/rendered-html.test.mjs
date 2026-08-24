@@ -43,7 +43,7 @@ test("server-renders the Municipio Digital portal", async () => {
   assert.doesNotMatch(html, /DATABASE_URL|postgresql:\/\//i);
 });
 
-test("keeps Neon lazy and ChatGPT Sites build-compatible", async () => {
+test("keeps municipal data lazy, protected, and ChatGPT Sites compatible", async () => {
   const [page, medical, dbIndex, schema, listApi, trackingApi, medicalApi, hosting] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/medical.tsx", import.meta.url), "utf8"),
@@ -57,7 +57,7 @@ test("keeps Neon lazy and ChatGPT Sites build-compatible", async () => {
 
   assert.match(page, /fetch\("\/api\/hojas-ruta"/);
   assert.match(page, /\/api\/seguimiento\//);
-  assert.match(page, /Neon · datos en vivo/);
+  assert.match(page, /Acceso protegido · 2FA/);
   assert.match(listApi, /export async function GET/);
   assert.match(listApi, /export async function POST/);
   assert.match(trackingApi, /obtenerSeguimiento/);
@@ -86,6 +86,38 @@ test("keeps Neon lazy and ChatGPT Sites build-compatible", async () => {
   assert.match(hosting, /"project_id"/);
   assert.match(hosting, /"d1": null/);
   assert.doesNotMatch(`${page}\n${medical}\n${dbIndex}\n${schema}`, /postgresql:\/\//i);
+});
+
+test("enforces scoped institutional access with MFA and auditable roles", async () => {
+  const [accessUi, accessServer, inviteApi, accessMigration] = await Promise.all([
+    readFile(new URL("../app/access.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../db/access-control.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/access/invitations/route.ts", import.meta.url), "utf8"),
+    readFile(
+      new URL("../supabase/migrations/20260824201726_access_control.sql", import.meta.url),
+      "utf8",
+    ),
+  ]);
+
+  for (const role of [
+    "super_admin",
+    "sigem_admin",
+    "health_admin",
+    "health_admission",
+    "health_physician",
+    "health_nursing",
+  ]) {
+    assert.match(accessMigration, new RegExp(`'${role}'`));
+  }
+
+  assert.match(accessUi, /mfa\.enroll/);
+  assert.match(accessUi, /mfa\.challenge/);
+  assert.match(accessServer, /authorizeRequest/);
+  assert.match(inviteApi, /inviteUserByEmail/);
+  assert.match(accessMigration, /access_bootstrap_super_admin/);
+  assert.match(accessMigration, /force row level security/);
+  assert.match(accessMigration, /audit_events/);
+  assert.doesNotMatch(`${accessUi}\n${accessServer}\n${inviteApi}`, /service_role|HEALTH_SUPABASE_SECRET_KEY/);
 });
 
 test("keeps the health database private and server-only", async () => {
