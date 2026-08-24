@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import "./globals.css";
 import "./live.css";
 import "./premium-theme.css";
+import "./medical.css";
 
 const baseMetadata: Metadata = {
   title: "Municipio Digital | Cuatro Cañadas",
@@ -31,13 +32,13 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName: "Municipio Digital Cuatro Cañadas",
       locale: "es_BO",
       type: "website",
-      images: [{ url: `${origin}/og-premium-verde.png`, width: 1672, height: 941, alt: "Una gestión para todos, Municipio Digital de Cuatro Cañadas" }],
+      images: [{ url: `${origin}/og-premium-medico.png`, width: 1672, height: 941, alt: "Municipio Digital y fichas médicas virtuales de Cuatro Cañadas" }],
     },
     twitter: {
       card: "summary_large_image",
       title: "Municipio Digital | Cuatro Cañadas",
       description: "Una gestión para todos. Servicios y seguimiento digital del GAMCC.",
-      images: [`${origin}/og-premium-verde.png`],
+      images: [`${origin}/og-premium-medico.png`],
     },
   };
 }

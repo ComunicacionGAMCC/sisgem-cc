@@ -1,6 +1,7 @@
 import { config } from "dotenv";
 import { eq, sql } from "drizzle-orm";
 import { getDb } from "../db/index";
+import { obtenerPanelFichasMedicas } from "../db/fichas-medicas";
 import {
   auditoria,
   derivaciones,
@@ -182,4 +183,5 @@ await db
   .onConflictDoNothing();
 
 const [{ total }] = await db.select({ total: sql<number>`count(*)::int` }).from(hojasDeRuta);
-console.log(`Semilla completada: ${total} hojas de ruta disponibles.`);
+const panelMedico = await obtenerPanelFichasMedicas();
+console.log(`Semilla completada: ${total} hojas de ruta y ${panelMedico.specialties.length} especialidades médicas disponibles.`);

@@ -8,6 +8,13 @@
       "when": 1786049852939,
       "tag": "0000_pretty_gargoyle",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1787592409909,
+      "tag": "0001_lumpy_stingray",
+      "breakpoints": true
     }
   ]
 }

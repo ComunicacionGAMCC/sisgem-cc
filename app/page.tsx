@@ -1,8 +1,9 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { MedicalBookingCard, MedicalModule } from "./medical";
 
-type InternalView = "inicio" | "hojas" | "contrataciones" | "agenda" | "transparencia";
+type InternalView = "inicio" | "hojas" | "fichas" | "contrataciones" | "agenda" | "transparencia";
 
 const services = [
   { number: "01", title: "Seguimiento digital", description: "Consulta el estado de tu hoja de ruta con el código de tu comprobante.", color: "green", target: "seguimiento" },
@@ -254,11 +255,7 @@ export default function Home() {
         {notice && <div className="notice" role="status"><span>{notice}</span><button onClick={() => setNotice("")} aria-label="Cerrar aviso">×</button></div>}
 
         <section className="priorityServices" aria-label="Servicios prioritarios">
-          <article className="priorityCard medicalCard" id="ficha-medica">
-            <div className="priorityIcon" aria-hidden="true">✚</div>
-            <div><span>SALUD MUNICIPAL</span><h2>Saca tu ficha médica virtual aquí</h2><p>Evita filas innecesarias y consulta la disponibilidad de atención médica desde tu celular.</p></div>
-            <button onClick={() => showServiceNotice("Ficha médica virtual")}>Acceder a fichas <span>→</span></button>
-          </article>
+          <MedicalBookingCard />
           <article className="priorityCard reportCard" id="denuncia">
             <div className="priorityIcon" aria-hidden="true">!</div>
             <div><span>TRANSPARENCIA Y LUCHA CONTRA LA CORRUPCIÓN</span><h2>Denuncia anónima y protegida</h2><p>Reporta posibles hechos de corrupción sin publicar tu identidad. El canal especializado estará separado de los trámites administrativos.</p></div>
@@ -326,7 +323,7 @@ function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, se
   createdCode: string;
   routeCreated: (code: string) => void;
 }) {
-  const titles: Record<InternalView, string> = { inicio: "Panel de gestión", hojas: "Hojas de ruta", contrataciones: "Contrataciones", agenda: "Agenda institucional", transparencia: "Transparencia" };
+  const titles: Record<InternalView, string> = { inicio: "Panel de gestión", hojas: "Hojas de ruta", fichas: "Fichas médicas", contrataciones: "Contrataciones", agenda: "Agenda institucional", transparencia: "Transparencia" };
   return (
     <div className="internalShell">
       <aside className="sidebar">
@@ -335,6 +332,7 @@ function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, se
         <nav className="sideNav" aria-label="Navegación interna">
           <SideButton active={view === "inicio"} icon="⌂" label="Inicio" onClick={() => setView("inicio")} />
           <SideButton active={view === "hojas"} icon="↗" label="Hojas de ruta" badge={String(allRoutes.length)} onClick={() => setView("hojas")} />
+          <SideButton active={view === "fichas"} icon="✚" label="Fichas médicas" onClick={() => setView("fichas")} />
           <SideButton active={view === "contrataciones"} icon="▣" label="Contrataciones" onClick={() => setView("contrataciones")} />
           <SideButton active={view === "agenda"} icon="□" label="Agenda" onClick={() => setView("agenda")} />
           <SideButton active={view === "transparencia"} icon="◎" label="Transparencia" onClick={() => setView("transparencia")} />
@@ -346,6 +344,7 @@ function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, se
         <header className="internalHeader"><div><span className="sectionKicker">MUNICIPIO DIGITAL</span><h1>{titles[view]}</h1></div><div className="headerActions"><span className={`demoPill ${routeDataLive ? "live" : ""}`}><i /> {routeDataLive ? "Neon · datos en vivo" : "Modo compatible · datos locales"}</span><button className="iconButton" aria-label="Notificaciones">●<span className="notificationDot" /></button><button className="portalLink" onClick={openCitizen}>Ver portal ciudadano</button></div></header>
         {view === "inicio" && <Dashboard setView={setView} openRouteModal={openRouteModal} items={allRoutes} />}
         {view === "hojas" && <RoutesModule openRouteModal={openRouteModal} filter={filter} setFilter={setFilter} search={search} setSearch={setSearch} visibleRoutes={visibleRoutes} allRoutes={allRoutes} loading={routeLoading} />}
+        {view === "fichas" && <MedicalModule />}
         {view === "contrataciones" && <ProcurementModule openRouteModal={openRouteModal} />}
         {view === "agenda" && <AgendaModule />}
         {view === "transparencia" && <TransparencyModule />}

@@ -35,6 +35,8 @@ test("server-renders the Municipio Digital portal", async () => {
   assert.match(html, /HR-2026-00481/);
   assert.match(html, /Consulta el código exacto entregado/);
   assert.match(html, /Saca tu ficha médica virtual aquí/);
+  assert.match(html, /Hospital Municipal de Cuatro Cañadas/i);
+  assert.match(html, /Solicitar ficha/);
   assert.match(html, /Denuncia anónima y protegida/);
   assert.match(html, /Secretaría General o en la unidad municipal competente/);
   assert.doesNotMatch(html, /Iniciar un trámite/);
@@ -42,12 +44,14 @@ test("server-renders the Municipio Digital portal", async () => {
 });
 
 test("keeps Neon lazy and ChatGPT Sites build-compatible", async () => {
-  const [page, dbIndex, schema, listApi, trackingApi, hosting] = await Promise.all([
+  const [page, medical, dbIndex, schema, listApi, trackingApi, medicalApi, hosting] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/medical.tsx", import.meta.url), "utf8"),
     readFile(new URL("../db/index.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/hojas-ruta/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/seguimiento/[codigo]/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/fichas-medicas/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
   ]);
 
@@ -57,6 +61,10 @@ test("keeps Neon lazy and ChatGPT Sites build-compatible", async () => {
   assert.match(listApi, /export async function GET/);
   assert.match(listApi, /export async function POST/);
   assert.match(trackingApi, /obtenerSeguimiento/);
+  assert.match(medical, /fetch\("\/api\/fichas-medicas"/);
+  assert.match(medical, /Datos protegidos/);
+  assert.match(medicalApi, /export async function GET/);
+  assert.match(medicalApi, /export async function POST/);
   assert.match(dbIndex, /let database: ReturnType<typeof createDb> \| null = null/);
   assert.match(dbIndex, /if \(!database\) database = createDb\(\)/);
   assert.doesNotMatch(dbIndex, /neon\(process\.env\.DATABASE_URL!/);
@@ -69,13 +77,16 @@ test("keeps Neon lazy and ChatGPT Sites build-compatible", async () => {
     "derivaciones",
     "eventos_seguimiento",
     "auditoria",
+    "especialidades_medicas",
+    "cupos_medicos",
+    "fichas_medicas",
   ]) {
     assert.match(schema, new RegExp(`"${table}"`));
   }
 
   assert.match(hosting, /"project_id"/);
   assert.match(hosting, /"d1": null/);
-  assert.doesNotMatch(`${page}\n${dbIndex}\n${schema}`, /postgresql:\/\//i);
+  assert.doesNotMatch(`${page}\n${medical}\n${dbIndex}\n${schema}`, /postgresql:\/\//i);
 });
 
 test("uses the premium green and gold visual system", async () => {
