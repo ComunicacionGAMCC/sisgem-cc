@@ -77,3 +77,17 @@ test("keeps Neon lazy and ChatGPT Sites build-compatible", async () => {
   assert.match(hosting, /"d1": null/);
   assert.doesNotMatch(`${page}\n${dbIndex}\n${schema}`, /postgresql:\/\//i);
 });
+
+test("uses the premium green and gold visual system", async () => {
+  const [layout, theme, manifest] = await Promise.all([
+    readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/premium-theme.css", import.meta.url), "utf8"),
+    readFile(new URL("../public/manifest.webmanifest", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(layout, /import "\.\/premium-theme\.css"/);
+  assert.match(theme, /--navy: #123b28/);
+  assert.match(theme, /--yellow: #f0d45d/);
+  assert.doesNotMatch(theme, /#071247|#079bd6|#4a44a5|#17297d/i);
+  assert.match(manifest, /"theme_color": "#123b28"/);
+});

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import "./globals.css";
 import "./live.css";
+import "./premium-theme.css";
 
 const baseMetadata: Metadata = {
   title: "Municipio Digital | Cuatro Cañadas",
@@ -30,19 +31,19 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName: "Municipio Digital Cuatro Cañadas",
       locale: "es_BO",
       type: "website",
-      images: [{ url: `${origin}/og-gestion-para-todos.png`, width: 1672, height: 941, alt: "Una gestión para todos, Municipio Digital de Cuatro Cañadas" }],
+      images: [{ url: `${origin}/og-premium-verde.png`, width: 1672, height: 941, alt: "Una gestión para todos, Municipio Digital de Cuatro Cañadas" }],
     },
     twitter: {
       card: "summary_large_image",
       title: "Municipio Digital | Cuatro Cañadas",
       description: "Una gestión para todos. Servicios y seguimiento digital del GAMCC.",
-      images: [`${origin}/og-gestion-para-todos.png`],
+      images: [`${origin}/og-premium-verde.png`],
     },
   };
 }
 
 export const viewport: Viewport = {
-  themeColor: "#071247",
+  themeColor: "#123b28",
   width: "device-width",
   initialScale: 1,
 };
