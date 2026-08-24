@@ -77,12 +77,11 @@ test("keeps Neon lazy and ChatGPT Sites build-compatible", async () => {
     "derivaciones",
     "eventos_seguimiento",
     "auditoria",
-    "especialidades_medicas",
-    "cupos_medicos",
-    "fichas_medicas",
   ]) {
     assert.match(schema, new RegExp(`"${table}"`));
   }
+
+  assert.doesNotMatch(schema, /especialidades_medicas|cupos_medicos|fichas_medicas/);
 
   assert.match(hosting, /"project_id"/);
   assert.match(hosting, /"d1": null/);
