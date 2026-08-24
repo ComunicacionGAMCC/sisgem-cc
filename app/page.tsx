@@ -93,6 +93,14 @@ function HomeContent() {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => undefined);
     }
+    const accessRequested = new URLSearchParams(window.location.search).get("access") === "1";
+    const authCallback = /(?:^|[&#])type=(?:invite|recovery)(?:&|$)/.test(window.location.hash);
+    const accessTimer = accessRequested || authCallback
+      ? window.setTimeout(() => setPortal("internal"), 0)
+      : null;
+    return () => {
+      if (accessTimer !== null) window.clearTimeout(accessTimer);
+    };
   }, []);
 
   useEffect(() => {

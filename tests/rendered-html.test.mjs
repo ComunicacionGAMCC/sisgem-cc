@@ -89,7 +89,7 @@ test("keeps municipal data lazy, protected, and ChatGPT Sites compatible", async
 });
 
 test("enforces scoped institutional access with MFA and auditable roles", async () => {
-  const [accessUi, accessServer, inviteApi, accessMigration] = await Promise.all([
+  const [accessUi, accessServer, inviteApi, accessMigration, bootstrapMigration, bootstrapScript] = await Promise.all([
     readFile(new URL("../app/access.tsx", import.meta.url), "utf8"),
     readFile(new URL("../db/access-control.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/access/invitations/route.ts", import.meta.url), "utf8"),
@@ -97,6 +97,11 @@ test("enforces scoped institutional access with MFA and auditable roles", async 
       new URL("../supabase/migrations/20260824201726_access_control.sql", import.meta.url),
       "utf8",
     ),
+    readFile(
+      new URL("../supabase/migrations/20260824223407_allow_two_super_admin_bootstrap.sql", import.meta.url),
+      "utf8",
+    ),
+    readFile(new URL("../scripts/bootstrap-superadmins.ts", import.meta.url), "utf8"),
   ]);
 
   for (const role of [
@@ -117,6 +122,11 @@ test("enforces scoped institutional access with MFA and auditable roles", async 
   assert.match(accessMigration, /access_bootstrap_super_admin/);
   assert.match(accessMigration, /force row level security/);
   assert.match(accessMigration, /audit_events/);
+  assert.match(bootstrapMigration, /pg_advisory_xact_lock/);
+  assert.match(bootstrapMigration, /active_super_admins >= 2/);
+  assert.match(bootstrapMigration, /to service_role/);
+  assert.match(bootstrapScript, /inviteUserByEmail/);
+  assert.match(bootstrapScript, /\?access=1/);
   assert.doesNotMatch(`${accessUi}\n${accessServer}\n${inviteApi}`, /service_role|HEALTH_SUPABASE_SECRET_KEY/);
 });
 

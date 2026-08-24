@@ -10,8 +10,9 @@ del Hospital Municipal.
 
 ## Accesos institucionales
 
-- `super_admin`: administración global de plataforma. La primera cuenta se activa
-  una sola vez para Saúl Janco mediante el procedimiento seguro del servidor.
+- `super_admin`: administración global de plataforma. Los dos cupos iniciales
+  corresponden a Saúl Janco y a la Unidad de Comunicación; después del segundo
+  registro, el procedimiento de arranque queda bloqueado automáticamente.
 - `sigem_admin`: administración del SIGEM para Jefatura de Sistemas y Recursos
   Humanos, con asignaciones limitadas por unidad municipal.
 - `health_admin`: administración exclusiva del módulo de Salud; crea accesos para
