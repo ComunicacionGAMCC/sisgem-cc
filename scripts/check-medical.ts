@@ -1,8 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { config } from "dotenv";
-import { sql } from "drizzle-orm";
+import postgres from "postgres";
 import { crearFichaMedica, obtenerPanelFichasMedicas } from "../db/fichas-medicas";
-import { getDb } from "../db/index";
 
 config({ path: ".env.local", quiet: true });
 
@@ -23,15 +22,20 @@ const ficha = await crearFichaMedica({
 
 if (!ficha.code || ficha.turn < 1) throw new Error("La ficha de comprobación no fue emitida correctamente.");
 
-await getDb().execute(sql`
+const healthDatabaseUrl = process.env.HEALTH_DATABASE_URL;
+if (!healthDatabaseUrl) throw new Error("HEALTH_DATABASE_URL no está configurada para la comprobación.");
+
+const healthSql = postgres(healthDatabaseUrl, { prepare: false, max: 1, ssl: "require" });
+await healthSql`
   with retirada as (
-    delete from fichas_medicas
-    where solicitud_id = ${solicitudId}
-    returning cupo_id
+    delete from health.appointments
+    where request_id = ${solicitudId}
+    returning slot_id
   )
-  update cupos_medicos cm
-  set cupos_reservados = greatest(cm.cupos_reservados - 1, 0), updated_at = now()
-  where cm.id in (select cupo_id from retirada)
-`);
+  update health.appointment_slots cm
+  set reserved_count = greatest(cm.reserved_count - 1, 0), updated_at = now()
+  where cm.id in (select slot_id from retirada)
+`;
+await healthSql.end();
 
 console.log(`Comprobación médica correcta: ${ficha.specialty}, turno ${ficha.turn}; registro de prueba retirado.`);

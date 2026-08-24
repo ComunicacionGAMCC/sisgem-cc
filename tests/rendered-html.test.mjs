@@ -89,6 +89,32 @@ test("keeps Neon lazy and ChatGPT Sites build-compatible", async () => {
   assert.doesNotMatch(`${page}\n${medical}\n${dbIndex}\n${schema}`, /postgresql:\/\//i);
 });
 
+test("keeps the health database private and server-only", async () => {
+  const [healthClient, medicalService, coreMigration, portalMigration] = await Promise.all([
+    readFile(new URL("../db/health-index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/fichas-medicas.ts", import.meta.url), "utf8"),
+    readFile(
+      new URL("../supabase/migrations/20260824183927_health_core.sql", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../supabase/migrations/20260824185123_health_portal_api.sql", import.meta.url),
+      "utf8",
+    ),
+  ]);
+
+  assert.match(healthClient, /HEALTH_SUPABASE_SECRET_KEY/);
+  assert.doesNotMatch(healthClient, /NEXT_PUBLIC_/);
+  assert.match(medicalService, /health_portal_panel/);
+  assert.match(medicalService, /health_create_appointment/);
+  assert.match(coreMigration, /create schema if not exists health/);
+  assert.match(coreMigration, /force row level security/);
+  assert.match(coreMigration, /audit_events_immutable/);
+  assert.match(portalMigration, /revoke all on function public\.health_portal_panel/);
+  assert.match(portalMigration, /grant execute on function public\.health_portal_panel\(\) to service_role/);
+  assert.doesNotMatch(`${healthClient}\n${medicalService}`, /postgresql:\/\//i);
+});
+
 test("uses the premium green and gold visual system", async () => {
   const [layout, theme, manifest] = await Promise.all([
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
