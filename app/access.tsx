@@ -447,11 +447,11 @@ export function AccessManagement() {
   }, [access.client, access.session, canManageSigem, refreshIndex]);
 
   const selectedRole = roles.find((role) => role.code === roleCode);
-  const requiresUnit = selectedRole?.module === "sigem" && !["sigem_admin", "super_admin"].includes(roleCode);
-  const requiresPlantPosition = selectedRole?.module === "sigem" && roleCode !== "super_admin";
+  const requiresUnit = selectedRole?.module === "sigem" && !["sigem_admin", "sigem_prensa", "super_admin"].includes(roleCode);
+  const requiresPlantPosition = selectedRole?.module === "sigem" && !["sigem_prensa", "super_admin"].includes(roleCode);
   const editingRole = roles.find((role) => role.code === editingRoleCode);
-  const editingRequiresUnit = editingRole?.module === "sigem" && !["sigem_admin", "super_admin"].includes(editingRoleCode);
-  const editingRequiresPlantPosition = editingRole?.module === "sigem" && editingRoleCode !== "super_admin";
+  const editingRequiresUnit = editingRole?.module === "sigem" && !["sigem_admin", "sigem_prensa", "super_admin"].includes(editingRoleCode);
+  const editingRequiresPlantPosition = editingRole?.module === "sigem" && !["sigem_prensa", "super_admin"].includes(editingRoleCode);
   const selectedPosition = positions.find((position) => position.code === positionCode);
   const editingPosition = positions.find((position) => position.code === editingPositionCode);
 
@@ -526,7 +526,7 @@ export function AccessManagement() {
       || (normalizedJobTitle.includes("gabinete") && position.name.toLocaleLowerCase("es").includes("gabinete"))
     ));
     const primaryRoleRequiresUnit = primaryRole?.module === "sigem"
-      && !["sigem_admin", "super_admin"].includes(primaryRole.code);
+      && !["sigem_admin", "sigem_prensa", "super_admin"].includes(primaryRole.code);
     setSelectedUser(result.user);
     setEditingRoleCode(primaryRole?.code ?? "");
     setEditingUnitId(

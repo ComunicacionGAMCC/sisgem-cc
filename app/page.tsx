@@ -5,9 +5,10 @@ import { addMunicipalDays, capitalizeDateLabel, formatMunicipalDate, getMunicipa
 import { AccessGate, AccessManagement, AccessProvider, useAccess } from "./access";
 import { AgendaModule, AgendaSummary, canAccessCabinetAgenda } from "./agenda";
 import { MedicalBookingCard, MedicalModule } from "./medical";
+import { HumanResourcesModule } from "./recursos-humanos";
 import { useMunicipalDate } from "./use-municipal-date";
 
-type InternalView = "inicio" | "hojas" | "fichas" | "accesos" | "contrataciones" | "agenda" | "transparencia";
+type InternalView = "inicio" | "hojas" | "fichas" | "accesos" | "rrhh" | "contrataciones" | "agenda" | "transparencia";
 
 const services = [
   { number: "01", title: "Seguimiento digital", description: "Consulta el estado de tu hoja de ruta con el código de tu comprobante.", color: "green", target: "seguimiento" },
@@ -187,7 +188,10 @@ function HomeContent() {
       && (!access.context.mfaRequired || access.context.assuranceLevel === "aal2"),
     );
     if (!accessReady) return <AccessGate onBack={openCitizenPortal} />;
-    const primaryAuthorizedView = internalView === "inicio"
+    const pressOnly = access.context?.roles.some((role) => role.code === "sigem_prensa") ?? false;
+    const primaryAuthorizedView = pressOnly
+      ? "agenda"
+      : internalView === "inicio"
       && !access.hasPermission("sigem.routes.read")
       && access.hasPermission("health.appointments.read")
       ? "fichas"
@@ -359,9 +363,10 @@ function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, se
   today: Date | null;
 }) {
   const access = useAccess();
-  const titles: Record<InternalView, string> = { inicio: "Panel de gestión", hojas: "Hojas de ruta", fichas: "Fichas médicas", accesos: "Usuarios y accesos", contrataciones: "Contrataciones", agenda: "Agenda institucional", transparencia: "Transparencia" };
+  const titles: Record<InternalView, string> = { inicio: "Panel de gestión", hojas: "Hojas de ruta", fichas: "Fichas médicas", accesos: "Usuarios y accesos", rrhh: "Recursos Humanos", contrataciones: "Contrataciones", agenda: "Agenda institucional", transparencia: "Transparencia" };
   const canManageUsers = access.hasPermission("platform.users.manage") || access.hasPermission("sigem.users.manage") || access.hasPermission("health.users.manage");
   const canAccessAgenda = canAccessCabinetAgenda(access.context);
+  const pressOnly = access.context?.roles.some((role) => role.code === "sigem_prensa") ?? false;
   const greetingName = access.context?.profile.fullName.trim().split(/\s+/)[0] || "usuario";
   const initials = access.context?.profile.fullName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "US";
   return (
@@ -370,10 +375,11 @@ function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, se
         <button className="brandButton" onClick={openCitizen} aria-label="Volver al portal ciudadano"><img src="/marca-cuatro-canadas.png" alt="Cuatro Cañadas" /></button>
         <div className="sideLabel">GESTIÓN MUNICIPAL</div>
         <nav className="sideNav" aria-label="Navegación interna">
-          <SideButton active={view === "inicio"} icon="⌂" label="Inicio" onClick={() => setView("inicio")} />
+          {!pressOnly && <SideButton active={view === "inicio"} icon="⌂" label="Inicio" onClick={() => setView("inicio")} />}
           {access.hasPermission("sigem.routes.read") && <SideButton active={view === "hojas"} icon="↗" label="Hojas de ruta" badge={String(allRoutes.length)} onClick={() => setView("hojas")} />}
           {access.hasPermission("health.appointments.read") && <SideButton active={view === "fichas"} icon="✚" label="Fichas médicas" onClick={() => setView("fichas")} />}
           {canManageUsers && <SideButton active={view === "accesos"} icon="♙" label="Usuarios y accesos" onClick={() => setView("accesos")} />}
+          {access.hasPermission("sigem.hr.read") && <SideButton active={view === "rrhh"} icon="♧" label="Recursos Humanos" onClick={() => setView("rrhh")} />}
           {access.hasPermission("sigem.routes.read") && <SideButton active={view === "contrataciones"} icon="▣" label="Contrataciones" onClick={() => setView("contrataciones")} />}
           {canAccessAgenda && <SideButton active={view === "agenda"} icon="□" label="Agenda" onClick={() => setView("agenda")} />}
           {access.hasPermission("sigem.reports.read") && <SideButton active={view === "transparencia"} icon="◎" label="Transparencia" onClick={() => setView("transparencia")} />}
@@ -387,6 +393,7 @@ function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, se
         {view === "hojas" && <RoutesModule openRouteModal={openRouteModal} filter={filter} setFilter={setFilter} search={search} setSearch={setSearch} visibleRoutes={visibleRoutes} allRoutes={allRoutes} loading={routeLoading} />}
         {view === "fichas" && <MedicalModule />}
         {view === "accesos" && <AccessManagement />}
+        {view === "rrhh" && <HumanResourcesModule />}
         {view === "contrataciones" && <ProcurementModule openRouteModal={openRouteModal} />}
         {view === "agenda" && <AgendaModule today={today} />}
         {view === "transparencia" && <TransparencyModule today={today} />}

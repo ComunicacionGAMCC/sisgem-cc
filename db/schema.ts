@@ -5,6 +5,7 @@ import {
   index,
   integer,
   jsonb,
+  numeric,
   pgEnum,
   pgTable,
   text,
@@ -240,6 +241,124 @@ export const agendaActividades = pgTable(
       "agenda_actividades_horas_check",
       sql`${table.horaFin} is null or ${table.horaFin} > ${table.horaInicio}`,
     ),
+  ],
+);
+
+export const rrhhCargos = pgTable(
+  "rrhh_cargos",
+  {
+    id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+    codigo: varchar("codigo", { length: 40 }).notNull(),
+    unidadId: uuid("unidad_id").notNull().references(() => unidades.id, { onDelete: "restrict" }),
+    cargoOrganigramaId: integer("cargo_organigrama_id").references(() => cargosOrganigrama.id, { onDelete: "set null" }),
+    nombre: varchar("nombre", { length: 240 }).notNull(),
+    tipoVinculacion: varchar("tipo_vinculacion", { length: 30 }).notNull(),
+    haberBasico: numeric("haber_basico", { precision: 14, scale: 2 }).default("0").notNull(),
+    activo: boolean("activo").default(true).notNull(),
+    ...auditColumns,
+  },
+  (table) => [
+    uniqueIndex("rrhh_cargos_codigo_uidx").on(table.codigo),
+    index("rrhh_cargos_unidad_activo_idx").on(table.unidadId, table.activo),
+    check("rrhh_cargos_tipo_check", sql`${table.tipoVinculacion} in ('planta', 'consultor_linea', 'contrato')`),
+    check("rrhh_cargos_haber_check", sql`${table.haberBasico} >= 0`),
+  ],
+);
+
+export const rrhhPersonal = pgTable(
+  "rrhh_personal",
+  {
+    id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+    documento: varchar("documento", { length: 40 }).notNull(),
+    nombres: varchar("nombres", { length: 120 }).notNull(),
+    apellidos: varchar("apellidos", { length: 160 }).notNull(),
+    cargoId: integer("cargo_id").notNull().references(() => rrhhCargos.id, { onDelete: "restrict" }),
+    tipoVinculacion: varchar("tipo_vinculacion", { length: 30 }).notNull(),
+    fechaIngreso: date("fecha_ingreso").notNull(),
+    fechaFinContrato: date("fecha_fin_contrato"),
+    email: varchar("email", { length: 240 }),
+    telefono: varchar("telefono", { length: 40 }),
+    activo: boolean("activo").default(true).notNull(),
+    ...auditColumns,
+  },
+  (table) => [
+    uniqueIndex("rrhh_personal_documento_uidx").on(table.documento),
+    index("rrhh_personal_cargo_activo_idx").on(table.cargoId, table.activo),
+    check("rrhh_personal_tipo_check", sql`${table.tipoVinculacion} in ('planta', 'consultor_linea', 'contrato')`),
+  ],
+);
+
+export const rrhhMovimientosCargo = pgTable(
+  "rrhh_movimientos_cargo",
+  {
+    id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+    personalId: integer("personal_id").notNull().references(() => rrhhPersonal.id, { onDelete: "cascade" }),
+    cargoAnteriorId: integer("cargo_anterior_id").references(() => rrhhCargos.id, { onDelete: "set null" }),
+    cargoNuevoId: integer("cargo_nuevo_id").notNull().references(() => rrhhCargos.id, { onDelete: "restrict" }),
+    motivo: varchar("motivo", { length: 500 }).notNull(),
+    fechaEfectiva: date("fecha_efectiva").notNull(),
+    registradoPorUsuarioId: uuid("registrado_por_usuario_id"),
+    registradoPorNombre: varchar("registrado_por_nombre", { length: 220 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index("rrhh_movimientos_personal_fecha_idx").on(table.personalId, table.fechaEfectiva)],
+);
+
+export const rrhhPlanillas = pgTable(
+  "rrhh_planillas",
+  {
+    id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+    gestion: integer("gestion").notNull(),
+    mes: integer("mes").notNull(),
+    estado: varchar("estado", { length: 20 }).default("borrador").notNull(),
+    totalGanado: numeric("total_ganado", { precision: 16, scale: 2 }).default("0").notNull(),
+    totalDescuentos: numeric("total_descuentos", { precision: 16, scale: 2 }).default("0").notNull(),
+    totalLiquido: numeric("total_liquido", { precision: 16, scale: 2 }).default("0").notNull(),
+    creadoPorUsuarioId: uuid("creado_por_usuario_id"),
+    creadoPorNombre: varchar("creado_por_nombre", { length: 220 }),
+    ...auditColumns,
+  },
+  (table) => [
+    uniqueIndex("rrhh_planillas_periodo_uidx").on(table.gestion, table.mes),
+    check("rrhh_planillas_mes_check", sql`${table.mes} between 1 and 12`),
+    check("rrhh_planillas_estado_check", sql`${table.estado} in ('borrador', 'revisada', 'cerrada')`),
+  ],
+);
+
+export const rrhhPlanillaItems = pgTable(
+  "rrhh_planilla_items",
+  {
+    id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+    planillaId: integer("planilla_id").notNull().references(() => rrhhPlanillas.id, { onDelete: "cascade" }),
+    personalId: integer("personal_id").notNull().references(() => rrhhPersonal.id, { onDelete: "restrict" }),
+    haberBasico: numeric("haber_basico", { precision: 14, scale: 2 }).notNull(),
+    bonos: numeric("bonos", { precision: 14, scale: 2 }).default("0").notNull(),
+    totalGanado: numeric("total_ganado", { precision: 14, scale: 2 }).notNull(),
+    totalDescuentos: numeric("total_descuentos", { precision: 14, scale: 2 }).default("0").notNull(),
+    liquidoPagable: numeric("liquido_pagable", { precision: 14, scale: 2 }).notNull(),
+    observaciones: text("observaciones"),
+    ...auditColumns,
+  },
+  (table) => [
+    uniqueIndex("rrhh_planilla_items_personal_uidx").on(table.planillaId, table.personalId),
+    index("rrhh_planilla_items_personal_idx").on(table.personalId),
+  ],
+);
+
+export const rrhhDescuentos = pgTable(
+  "rrhh_descuentos",
+  {
+    id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+    planillaItemId: integer("planilla_item_id").notNull().references(() => rrhhPlanillaItems.id, { onDelete: "cascade" }),
+    concepto: varchar("concepto", { length: 180 }).notNull(),
+    tipo: varchar("tipo", { length: 30 }).default("otro").notNull(),
+    monto: numeric("monto", { precision: 14, scale: 2 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("rrhh_descuentos_item_idx").on(table.planillaItemId),
+    check("rrhh_descuentos_tipo_check", sql`${table.tipo} in ('afp', 'rc_iva', 'anticipo', 'falta', 'otro')`),
+    check("rrhh_descuentos_monto_check", sql`${table.monto} > 0`),
   ],
 );
 

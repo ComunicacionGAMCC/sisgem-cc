@@ -4,6 +4,7 @@ import {
   AccessDeniedError,
   authorizeRequest,
   requireCabinetAgendaAccess,
+  requireCabinetAgendaManagement,
 } from "../../../db/access-control";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +14,7 @@ const timePattern = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 
 export async function GET(request: NextRequest) {
   try {
-    const { context } = await authorizeRequest(request, "sigem.routes.read");
+    const { context } = await authorizeRequest(request);
     requireCabinetAgendaAccess(context);
     const from = request.nextUrl.searchParams.get("from") ?? "";
     const to = request.nextUrl.searchParams.get("to") ?? from;
@@ -33,8 +34,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { context } = await authorizeRequest(request, "sigem.routes.read");
-    requireCabinetAgendaAccess(context);
+    const { context } = await authorizeRequest(request);
+    requireCabinetAgendaManagement(context);
     const body = (await request.json()) as Partial<NewAgendaActivity>;
     const date = body.date?.trim() ?? "";
     const startTime = body.startTime?.trim() ?? "";

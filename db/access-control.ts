@@ -101,12 +101,14 @@ export function scopedMunicipalUnitIds(context: AccessContext) {
 
 export function hasCabinetAgendaAccess(context: AccessContext) {
   if (
-    context.permissions.includes("platform.users.manage")
+    context.permissions.includes("sigem.agenda.read")
+    || context.permissions.includes("sigem.agenda.manage")
+    || context.permissions.includes("platform.users.manage")
     || context.permissions.includes("sigem.users.manage")
   ) return true;
 
   const hasSigemRole = context.roles.some((role) => role.module === "sigem");
-  if (hasSigemRole && /gabinete/i.test(context.profile.jobTitle ?? "")) return true;
+  if (hasSigemRole && /(secretar.*gabinete|chofer.*ejecutivo.*coordinador)/i.test(context.profile.jobTitle ?? "")) return true;
 
   return context.roles.some((role) => (
     role.module === "sigem"
@@ -115,8 +117,25 @@ export function hasCabinetAgendaAccess(context: AccessContext) {
   ));
 }
 
+export function hasCabinetAgendaManagement(context: AccessContext) {
+  if (
+    context.permissions.includes("sigem.agenda.manage")
+    || context.permissions.includes("platform.users.manage")
+    || context.permissions.includes("sigem.users.manage")
+  ) return true;
+  const hasSigemRole = context.roles.some((role) => role.module === "sigem");
+  return hasSigemRole
+    && /(secretar.*gabinete|chofer.*ejecutivo.*coordinador)/i.test(context.profile.jobTitle ?? "");
+}
+
 export function requireCabinetAgendaAccess(context: AccessContext) {
   if (!hasCabinetAgendaAccess(context)) {
     throw new AccessDeniedError("La agenda del alcalde está reservada para Secretaría de Gabinete.");
+  }
+}
+
+export function requireCabinetAgendaManagement(context: AccessContext) {
+  if (!hasCabinetAgendaManagement(context)) {
+    throw new AccessDeniedError("Tu acceso a la agenda institucional es únicamente de lectura.");
   }
 }

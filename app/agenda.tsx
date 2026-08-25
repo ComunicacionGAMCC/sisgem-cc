@@ -37,17 +37,30 @@ export type AgendaActivity = {
 export function canAccessCabinetAgenda(context: AgendaAccessContext | null | undefined) {
   if (!context) return false;
   if (
-    context.permissions.includes("platform.users.manage")
+    context.permissions.includes("sigem.agenda.read")
+    || context.permissions.includes("sigem.agenda.manage")
+    || context.permissions.includes("platform.users.manage")
     || context.permissions.includes("sigem.users.manage")
   ) return true;
   const hasSigemRole = context.roles.some((role) => role.module === "sigem");
-  if (hasSigemRole && /gabinete/i.test(context.profile.jobTitle ?? "")) return true;
+  if (hasSigemRole && /(secretar.*gabinete|chofer.*ejecutivo.*coordinador)/i.test(context.profile.jobTitle ?? "")) return true;
 
   return context.roles.some((role) => (
     role.module === "sigem"
     && role.scopeType === "municipal_unit"
     && /gabinete/i.test(role.scopeLabel ?? "")
   ));
+}
+
+export function canManageCabinetAgenda(context: AgendaAccessContext | null | undefined) {
+  if (!context) return false;
+  if (
+    context.permissions.includes("sigem.agenda.manage")
+    || context.permissions.includes("platform.users.manage")
+    || context.permissions.includes("sigem.users.manage")
+  ) return true;
+  return context.roles.some((role) => role.module === "sigem")
+    && /(secretar.*gabinete|chofer.*ejecutivo.*coordinador)/i.test(context.profile.jobTitle ?? "");
 }
 
 function useAgendaActivities(from: string, to = from) {
@@ -122,6 +135,7 @@ export function AgendaModule({ today }: { today: Date | null }) {
   const [message, setMessage] = useState("");
   const activeDate = selectedDate || (today ? getMunicipalIsoDate(today) : "");
   const { items, loading, error, reload } = useAgendaActivities(activeDate);
+  const canManage = canManageCabinetAgenda(access.context);
 
   const selected = useMemo(
     () => activeDate ? parseMunicipalIsoDate(activeDate) : null,
@@ -189,7 +203,7 @@ export function AgendaModule({ today }: { today: Date | null }) {
     <section className="moduleView">
       <div className="moduleTitle">
         <div><h2>Agenda del alcalde</h2><p>Consulta actividades pasadas y futuras o registra una nueva.</p></div>
-        <button className="primaryAction" onClick={() => setShowForm(true)}><span>＋</span>Agendar actividad</button>
+        {canManage && <button className="primaryAction" onClick={() => setShowForm(true)}><span>＋</span>Agendar actividad</button>}
       </div>
       <div className="agendaDateToolbar">
         <label>Ir a una fecha<input type="date" value={activeDate} onChange={(event) => setSelectedDate(event.target.value)} /></label>
@@ -219,7 +233,7 @@ export function AgendaModule({ today }: { today: Date | null }) {
         ))}
       </section>
 
-      {showForm && (
+      {showForm && canManage && (
         <div className="modalBackdrop" role="presentation">
           <form className="routeModal agendaModal" onSubmit={submitActivity}>
             <header className="modalHeader"><div><span>AGENDA DEL ALCALDE</span><h2>Nueva actividad</h2></div><button type="button" onClick={() => setShowForm(false)} aria-label="Cerrar">×</button></header>

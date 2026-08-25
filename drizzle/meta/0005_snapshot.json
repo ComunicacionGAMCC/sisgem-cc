@@ -1,0 +1,2141 @@
+{
+  "id": "c5d8d241-049b-434d-8c11-b3cfd1bf515b",
+  "prevId": "a0d95279-c802-4df9-bd7e-49b2463e4bd5",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.agenda_actividades": {
+      "name": "agenda_actividades",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "fecha": {
+          "name": "fecha",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hora_inicio": {
+          "name": "hora_inicio",
+          "type": "time",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hora_fin": {
+          "name": "hora_fin",
+          "type": "time",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "titulo": {
+          "name": "titulo",
+          "type": "varchar(220)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lugar": {
+          "name": "lugar",
+          "type": "varchar(220)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "descripcion": {
+          "name": "descripcion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "estado": {
+          "name": "estado",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'confirmada'"
+        },
+        "creado_por_usuario_id": {
+          "name": "creado_por_usuario_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "creado_por_nombre": {
+          "name": "creado_por_nombre",
+          "type": "varchar(220)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "agenda_actividades_fecha_hora_idx": {
+          "name": "agenda_actividades_fecha_hora_idx",
+          "columns": [
+            {
+              "expression": "fecha",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "hora_inicio",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "agenda_actividades_estado_idx": {
+          "name": "agenda_actividades_estado_idx",
+          "columns": [
+            {
+              "expression": "estado",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "agenda_actividades_estado_check": {
+          "name": "agenda_actividades_estado_check",
+          "value": "\"agenda_actividades\".\"estado\" in ('confirmada', 'tentativa')"
+        },
+        "agenda_actividades_horas_check": {
+          "name": "agenda_actividades_horas_check",
+          "value": "\"agenda_actividades\".\"hora_fin\" is null or \"agenda_actividades\".\"hora_fin\" > \"agenda_actividades\".\"hora_inicio\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.auditoria": {
+      "name": "auditoria",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "entidad": {
+          "name": "entidad",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entidad_id": {
+          "name": "entidad_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "accion": {
+          "name": "accion",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "funcionario_id": {
+          "name": "funcionario_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "detalle": {
+          "name": "detalle",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "auditoria_entidad_idx": {
+          "name": "auditoria_entidad_idx",
+          "columns": [
+            {
+              "expression": "entidad",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "entidad_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "auditoria_funcionario_id_funcionarios_id_fk": {
+          "name": "auditoria_funcionario_id_funcionarios_id_fk",
+          "tableFrom": "auditoria",
+          "tableTo": "funcionarios",
+          "columnsFrom": [
+            "funcionario_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.cargos_organigrama": {
+      "name": "cargos_organigrama",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "cargos_organigrama_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "codigo": {
+          "name": "codigo",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unidad_id": {
+          "name": "unidad_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "superior_codigo": {
+          "name": "superior_codigo",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nombre": {
+          "name": "nombre",
+          "type": "varchar(240)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nivel": {
+          "name": "nivel",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "gestion": {
+          "name": "gestion",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 2025
+        },
+        "orden": {
+          "name": "orden",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "activo": {
+          "name": "activo",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "cargos_organigrama_codigo_uidx": {
+          "name": "cargos_organigrama_codigo_uidx",
+          "columns": [
+            {
+              "expression": "codigo",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "cargos_organigrama_unidad_idx": {
+          "name": "cargos_organigrama_unidad_idx",
+          "columns": [
+            {
+              "expression": "unidad_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "activo",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "cargos_organigrama_superior_idx": {
+          "name": "cargos_organigrama_superior_idx",
+          "columns": [
+            {
+              "expression": "superior_codigo",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "cargos_organigrama_unidad_id_unidades_id_fk": {
+          "name": "cargos_organigrama_unidad_id_unidades_id_fk",
+          "tableFrom": "cargos_organigrama",
+          "tableTo": "unidades",
+          "columnsFrom": [
+            "unidad_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "cargos_organigrama_nivel_check": {
+          "name": "cargos_organigrama_nivel_check",
+          "value": "\"cargos_organigrama\".\"nivel\" in ('ejecutivo', 'asesoria', 'apoyo', 'direccion', 'jefatura', 'profesional', 'tecnico', 'auxiliar', 'operativo')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.derivaciones": {
+      "name": "derivaciones",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "hoja_ruta_id": {
+          "name": "hoja_ruta_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unidad_origen_id": {
+          "name": "unidad_origen_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "unidad_destino_id": {
+          "name": "unidad_destino_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "derivado_por_id": {
+          "name": "derivado_por_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "recibido_por_id": {
+          "name": "recibido_por_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "estado": {
+          "name": "estado",
+          "type": "estado_derivacion",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pendiente'"
+        },
+        "nota": {
+          "name": "nota",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "derivado_at": {
+          "name": "derivado_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "recibido_at": {
+          "name": "recibido_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "derivaciones_hoja_idx": {
+          "name": "derivaciones_hoja_idx",
+          "columns": [
+            {
+              "expression": "hoja_ruta_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "derivaciones_hoja_ruta_id_hojas_de_ruta_id_fk": {
+          "name": "derivaciones_hoja_ruta_id_hojas_de_ruta_id_fk",
+          "tableFrom": "derivaciones",
+          "tableTo": "hojas_de_ruta",
+          "columnsFrom": [
+            "hoja_ruta_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "derivaciones_unidad_origen_id_unidades_id_fk": {
+          "name": "derivaciones_unidad_origen_id_unidades_id_fk",
+          "tableFrom": "derivaciones",
+          "tableTo": "unidades",
+          "columnsFrom": [
+            "unidad_origen_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "derivaciones_unidad_destino_id_unidades_id_fk": {
+          "name": "derivaciones_unidad_destino_id_unidades_id_fk",
+          "tableFrom": "derivaciones",
+          "tableTo": "unidades",
+          "columnsFrom": [
+            "unidad_destino_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "derivaciones_derivado_por_id_funcionarios_id_fk": {
+          "name": "derivaciones_derivado_por_id_funcionarios_id_fk",
+          "tableFrom": "derivaciones",
+          "tableTo": "funcionarios",
+          "columnsFrom": [
+            "derivado_por_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "derivaciones_recibido_por_id_funcionarios_id_fk": {
+          "name": "derivaciones_recibido_por_id_funcionarios_id_fk",
+          "tableFrom": "derivaciones",
+          "tableTo": "funcionarios",
+          "columnsFrom": [
+            "recibido_por_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.eventos_seguimiento": {
+      "name": "eventos_seguimiento",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "hoja_ruta_id": {
+          "name": "hoja_ruta_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "estado": {
+          "name": "estado",
+          "type": "estado_hoja",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "titulo": {
+          "name": "titulo",
+          "type": "varchar(220)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "descripcion": {
+          "name": "descripcion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "unidad_id": {
+          "name": "unidad_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "funcionario_id": {
+          "name": "funcionario_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "publico": {
+          "name": "publico",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "eventos_seguimiento_hoja_idx": {
+          "name": "eventos_seguimiento_hoja_idx",
+          "columns": [
+            {
+              "expression": "hoja_ruta_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "eventos_seguimiento_fecha_idx": {
+          "name": "eventos_seguimiento_fecha_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "eventos_seguimiento_hoja_ruta_id_hojas_de_ruta_id_fk": {
+          "name": "eventos_seguimiento_hoja_ruta_id_hojas_de_ruta_id_fk",
+          "tableFrom": "eventos_seguimiento",
+          "tableTo": "hojas_de_ruta",
+          "columnsFrom": [
+            "hoja_ruta_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "eventos_seguimiento_unidad_id_unidades_id_fk": {
+          "name": "eventos_seguimiento_unidad_id_unidades_id_fk",
+          "tableFrom": "eventos_seguimiento",
+          "tableTo": "unidades",
+          "columnsFrom": [
+            "unidad_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "eventos_seguimiento_funcionario_id_funcionarios_id_fk": {
+          "name": "eventos_seguimiento_funcionario_id_funcionarios_id_fk",
+          "tableFrom": "eventos_seguimiento",
+          "tableTo": "funcionarios",
+          "columnsFrom": [
+            "funcionario_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.funcionarios": {
+      "name": "funcionarios",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "unidad_id": {
+          "name": "unidad_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nombres": {
+          "name": "nombres",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "apellidos": {
+          "name": "apellidos",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cargo": {
+          "name": "cargo",
+          "type": "varchar(180)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(240)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "telefono": {
+          "name": "telefono",
+          "type": "varchar(40)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "activo": {
+          "name": "activo",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "funcionarios_email_uidx": {
+          "name": "funcionarios_email_uidx",
+          "columns": [
+            {
+              "expression": "email",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "funcionarios_unidad_idx": {
+          "name": "funcionarios_unidad_idx",
+          "columns": [
+            {
+              "expression": "unidad_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "funcionarios_unidad_id_unidades_id_fk": {
+          "name": "funcionarios_unidad_id_unidades_id_fk",
+          "tableFrom": "funcionarios",
+          "tableTo": "unidades",
+          "columnsFrom": [
+            "unidad_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.hojas_de_ruta": {
+      "name": "hojas_de_ruta",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "codigo": {
+          "name": "codigo",
+          "type": "varchar(24)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tipo": {
+          "name": "tipo",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'solicitud_externa'"
+        },
+        "asunto": {
+          "name": "asunto",
+          "type": "varchar(300)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "descripcion": {
+          "name": "descripcion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "prioridad": {
+          "name": "prioridad",
+          "type": "prioridad_hoja",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'normal'"
+        },
+        "estado": {
+          "name": "estado",
+          "type": "estado_hoja",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'recibido'"
+        },
+        "solicitante_id": {
+          "name": "solicitante_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unidad_actual_id": {
+          "name": "unidad_actual_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "creado_por_id": {
+          "name": "creado_por_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fecha_limite": {
+          "name": "fecha_limite",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "finalizado_at": {
+          "name": "finalizado_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "hojas_de_ruta_codigo_uidx": {
+          "name": "hojas_de_ruta_codigo_uidx",
+          "columns": [
+            {
+              "expression": "codigo",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "hojas_de_ruta_estado_idx": {
+          "name": "hojas_de_ruta_estado_idx",
+          "columns": [
+            {
+              "expression": "estado",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "hojas_de_ruta_unidad_idx": {
+          "name": "hojas_de_ruta_unidad_idx",
+          "columns": [
+            {
+              "expression": "unidad_actual_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "hojas_de_ruta_created_idx": {
+          "name": "hojas_de_ruta_created_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "hojas_de_ruta_solicitante_id_solicitantes_id_fk": {
+          "name": "hojas_de_ruta_solicitante_id_solicitantes_id_fk",
+          "tableFrom": "hojas_de_ruta",
+          "tableTo": "solicitantes",
+          "columnsFrom": [
+            "solicitante_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "hojas_de_ruta_unidad_actual_id_unidades_id_fk": {
+          "name": "hojas_de_ruta_unidad_actual_id_unidades_id_fk",
+          "tableFrom": "hojas_de_ruta",
+          "tableTo": "unidades",
+          "columnsFrom": [
+            "unidad_actual_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "hojas_de_ruta_creado_por_id_funcionarios_id_fk": {
+          "name": "hojas_de_ruta_creado_por_id_funcionarios_id_fk",
+          "tableFrom": "hojas_de_ruta",
+          "tableTo": "funcionarios",
+          "columnsFrom": [
+            "creado_por_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.rrhh_cargos": {
+      "name": "rrhh_cargos",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "rrhh_cargos_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "codigo": {
+          "name": "codigo",
+          "type": "varchar(40)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unidad_id": {
+          "name": "unidad_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cargo_organigrama_id": {
+          "name": "cargo_organigrama_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nombre": {
+          "name": "nombre",
+          "type": "varchar(240)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tipo_vinculacion": {
+          "name": "tipo_vinculacion",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "haber_basico": {
+          "name": "haber_basico",
+          "type": "numeric(14, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "activo": {
+          "name": "activo",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "rrhh_cargos_codigo_uidx": {
+          "name": "rrhh_cargos_codigo_uidx",
+          "columns": [
+            {
+              "expression": "codigo",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "rrhh_cargos_unidad_activo_idx": {
+          "name": "rrhh_cargos_unidad_activo_idx",
+          "columns": [
+            {
+              "expression": "unidad_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "activo",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "rrhh_cargos_unidad_id_unidades_id_fk": {
+          "name": "rrhh_cargos_unidad_id_unidades_id_fk",
+          "tableFrom": "rrhh_cargos",
+          "tableTo": "unidades",
+          "columnsFrom": [
+            "unidad_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "rrhh_cargos_cargo_organigrama_id_cargos_organigrama_id_fk": {
+          "name": "rrhh_cargos_cargo_organigrama_id_cargos_organigrama_id_fk",
+          "tableFrom": "rrhh_cargos",
+          "tableTo": "cargos_organigrama",
+          "columnsFrom": [
+            "cargo_organigrama_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "rrhh_cargos_tipo_check": {
+          "name": "rrhh_cargos_tipo_check",
+          "value": "\"rrhh_cargos\".\"tipo_vinculacion\" in ('planta', 'consultor_linea', 'contrato')"
+        },
+        "rrhh_cargos_haber_check": {
+          "name": "rrhh_cargos_haber_check",
+          "value": "\"rrhh_cargos\".\"haber_basico\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.rrhh_descuentos": {
+      "name": "rrhh_descuentos",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "rrhh_descuentos_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "planilla_item_id": {
+          "name": "planilla_item_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "concepto": {
+          "name": "concepto",
+          "type": "varchar(180)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tipo": {
+          "name": "tipo",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'otro'"
+        },
+        "monto": {
+          "name": "monto",
+          "type": "numeric(14, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "rrhh_descuentos_item_idx": {
+          "name": "rrhh_descuentos_item_idx",
+          "columns": [
+            {
+              "expression": "planilla_item_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "rrhh_descuentos_planilla_item_id_rrhh_planilla_items_id_fk": {
+          "name": "rrhh_descuentos_planilla_item_id_rrhh_planilla_items_id_fk",
+          "tableFrom": "rrhh_descuentos",
+          "tableTo": "rrhh_planilla_items",
+          "columnsFrom": [
+            "planilla_item_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "rrhh_descuentos_tipo_check": {
+          "name": "rrhh_descuentos_tipo_check",
+          "value": "\"rrhh_descuentos\".\"tipo\" in ('afp', 'rc_iva', 'anticipo', 'falta', 'otro')"
+        },
+        "rrhh_descuentos_monto_check": {
+          "name": "rrhh_descuentos_monto_check",
+          "value": "\"rrhh_descuentos\".\"monto\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.rrhh_movimientos_cargo": {
+      "name": "rrhh_movimientos_cargo",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "rrhh_movimientos_cargo_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "personal_id": {
+          "name": "personal_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cargo_anterior_id": {
+          "name": "cargo_anterior_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cargo_nuevo_id": {
+          "name": "cargo_nuevo_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "motivo": {
+          "name": "motivo",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fecha_efectiva": {
+          "name": "fecha_efectiva",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "registrado_por_usuario_id": {
+          "name": "registrado_por_usuario_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "registrado_por_nombre": {
+          "name": "registrado_por_nombre",
+          "type": "varchar(220)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "rrhh_movimientos_personal_fecha_idx": {
+          "name": "rrhh_movimientos_personal_fecha_idx",
+          "columns": [
+            {
+              "expression": "personal_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "fecha_efectiva",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "rrhh_movimientos_cargo_personal_id_rrhh_personal_id_fk": {
+          "name": "rrhh_movimientos_cargo_personal_id_rrhh_personal_id_fk",
+          "tableFrom": "rrhh_movimientos_cargo",
+          "tableTo": "rrhh_personal",
+          "columnsFrom": [
+            "personal_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "rrhh_movimientos_cargo_cargo_anterior_id_rrhh_cargos_id_fk": {
+          "name": "rrhh_movimientos_cargo_cargo_anterior_id_rrhh_cargos_id_fk",
+          "tableFrom": "rrhh_movimientos_cargo",
+          "tableTo": "rrhh_cargos",
+          "columnsFrom": [
+            "cargo_anterior_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "rrhh_movimientos_cargo_cargo_nuevo_id_rrhh_cargos_id_fk": {
+          "name": "rrhh_movimientos_cargo_cargo_nuevo_id_rrhh_cargos_id_fk",
+          "tableFrom": "rrhh_movimientos_cargo",
+          "tableTo": "rrhh_cargos",
+          "columnsFrom": [
+            "cargo_nuevo_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.rrhh_personal": {
+      "name": "rrhh_personal",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "rrhh_personal_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "documento": {
+          "name": "documento",
+          "type": "varchar(40)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nombres": {
+          "name": "nombres",
+          "type": "varchar(120)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "apellidos": {
+          "name": "apellidos",
+          "type": "varchar(160)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cargo_id": {
+          "name": "cargo_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tipo_vinculacion": {
+          "name": "tipo_vinculacion",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fecha_ingreso": {
+          "name": "fecha_ingreso",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fecha_fin_contrato": {
+          "name": "fecha_fin_contrato",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(240)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "telefono": {
+          "name": "telefono",
+          "type": "varchar(40)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "activo": {
+          "name": "activo",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "rrhh_personal_documento_uidx": {
+          "name": "rrhh_personal_documento_uidx",
+          "columns": [
+            {
+              "expression": "documento",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "rrhh_personal_cargo_activo_idx": {
+          "name": "rrhh_personal_cargo_activo_idx",
+          "columns": [
+            {
+              "expression": "cargo_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "activo",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "rrhh_personal_cargo_id_rrhh_cargos_id_fk": {
+          "name": "rrhh_personal_cargo_id_rrhh_cargos_id_fk",
+          "tableFrom": "rrhh_personal",
+          "tableTo": "rrhh_cargos",
+          "columnsFrom": [
+            "cargo_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "rrhh_personal_tipo_check": {
+          "name": "rrhh_personal_tipo_check",
+          "value": "\"rrhh_personal\".\"tipo_vinculacion\" in ('planta', 'consultor_linea', 'contrato')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.rrhh_planilla_items": {
+      "name": "rrhh_planilla_items",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "rrhh_planilla_items_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "planilla_id": {
+          "name": "planilla_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "personal_id": {
+          "name": "personal_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "haber_basico": {
+          "name": "haber_basico",
+          "type": "numeric(14, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bonos": {
+          "name": "bonos",
+          "type": "numeric(14, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "total_ganado": {
+          "name": "total_ganado",
+          "type": "numeric(14, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total_descuentos": {
+          "name": "total_descuentos",
+          "type": "numeric(14, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "liquido_pagable": {
+          "name": "liquido_pagable",
+          "type": "numeric(14, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "observaciones": {
+          "name": "observaciones",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "rrhh_planilla_items_personal_uidx": {
+          "name": "rrhh_planilla_items_personal_uidx",
+          "columns": [
+            {
+              "expression": "planilla_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "personal_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "rrhh_planilla_items_personal_idx": {
+          "name": "rrhh_planilla_items_personal_idx",
+          "columns": [
+            {
+              "expression": "personal_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "rrhh_planilla_items_planilla_id_rrhh_planillas_id_fk": {
+          "name": "rrhh_planilla_items_planilla_id_rrhh_planillas_id_fk",
+          "tableFrom": "rrhh_planilla_items",
+          "tableTo": "rrhh_planillas",
+          "columnsFrom": [
+            "planilla_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "rrhh_planilla_items_personal_id_rrhh_personal_id_fk": {
+          "name": "rrhh_planilla_items_personal_id_rrhh_personal_id_fk",
+          "tableFrom": "rrhh_planilla_items",
+          "tableTo": "rrhh_personal",
+          "columnsFrom": [
+            "personal_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.rrhh_planillas": {
+      "name": "rrhh_planillas",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "rrhh_planillas_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "gestion": {
+          "name": "gestion",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mes": {
+          "name": "mes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "estado": {
+          "name": "estado",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'borrador'"
+        },
+        "total_ganado": {
+          "name": "total_ganado",
+          "type": "numeric(16, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "total_descuentos": {
+          "name": "total_descuentos",
+          "type": "numeric(16, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "total_liquido": {
+          "name": "total_liquido",
+          "type": "numeric(16, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "creado_por_usuario_id": {
+          "name": "creado_por_usuario_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "creado_por_nombre": {
+          "name": "creado_por_nombre",
+          "type": "varchar(220)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "rrhh_planillas_periodo_uidx": {
+          "name": "rrhh_planillas_periodo_uidx",
+          "columns": [
+            {
+              "expression": "gestion",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "mes",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "rrhh_planillas_mes_check": {
+          "name": "rrhh_planillas_mes_check",
+          "value": "\"rrhh_planillas\".\"mes\" between 1 and 12"
+        },
+        "rrhh_planillas_estado_check": {
+          "name": "rrhh_planillas_estado_check",
+          "value": "\"rrhh_planillas\".\"estado\" in ('borrador', 'revisada', 'cerrada')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.secuencias_codigo": {
+      "name": "secuencias_codigo",
+      "schema": "",
+      "columns": {
+        "gestion": {
+          "name": "gestion",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "ultimo": {
+          "name": "ultimo",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.solicitantes": {
+      "name": "solicitantes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tipo": {
+          "name": "tipo",
+          "type": "tipo_solicitante",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'persona'"
+        },
+        "nombre": {
+          "name": "nombre",
+          "type": "varchar(220)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "documento": {
+          "name": "documento",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "organizacion": {
+          "name": "organizacion",
+          "type": "varchar(220)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(240)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "telefono": {
+          "name": "telefono",
+          "type": "varchar(40)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "direccion": {
+          "name": "direccion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "solicitantes_documento_uidx": {
+          "name": "solicitantes_documento_uidx",
+          "columns": [
+            {
+              "expression": "documento",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.unidades": {
+      "name": "unidades",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "codigo": {
+          "name": "codigo",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nombre": {
+          "name": "nombre",
+          "type": "varchar(180)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "descripcion": {
+          "name": "descripcion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "activa": {
+          "name": "activa",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "unidades_codigo_uidx": {
+          "name": "unidades_codigo_uidx",
+          "columns": [
+            {
+              "expression": "codigo",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.estado_derivacion": {
+      "name": "estado_derivacion",
+      "schema": "public",
+      "values": [
+        "pendiente",
+        "recibida",
+        "atendida"
+      ]
+    },
+    "public.estado_hoja": {
+      "name": "estado_hoja",
+      "schema": "public",
+      "values": [
+        "recibido",
+        "derivado",
+        "en_proceso",
+        "observado",
+        "finalizado",
+        "archivado"
+      ]
+    },
+    "public.prioridad_hoja": {
+      "name": "prioridad_hoja",
+      "schema": "public",
+      "values": [
+        "baja",
+        "normal",
+        "alta",
+        "urgente"
+      ]
+    },
+    "public.tipo_solicitante": {
+      "name": "tipo_solicitante",
+      "schema": "public",
+      "values": [
+        "persona",
+        "institucion",
+        "unidad_interna"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

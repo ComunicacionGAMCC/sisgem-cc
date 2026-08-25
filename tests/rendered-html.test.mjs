@@ -85,8 +85,8 @@ test("keeps municipal data lazy, protected, and ChatGPT Sites compatible", async
   assert.match(agendaService, /lte\(agendaActividades\.fecha, to\)/);
   assert.match(agendaApi, /export async function GET/);
   assert.match(agendaApi, /export async function POST/);
-  assert.match(agendaApi, /authorizeRequest\(request, "sigem\.routes\.read"\)/);
   assert.match(agendaApi, /requireCabinetAgendaAccess\(context\)/);
+  assert.match(agendaApi, /requireCabinetAgendaManagement\(context\)/);
   assert.match(accessServer, /context\.profile\.jobTitle/);
   assert.match(accessServer, /La agenda del alcalde.*Secretar.*de Gabinete/);
   assert.doesNotMatch(page, /directores|Central 4 Este|avance de obra/);
@@ -111,6 +111,12 @@ test("keeps municipal data lazy, protected, and ChatGPT Sites compatible", async
     "derivaciones",
     "eventos_seguimiento",
     "agenda_actividades",
+    "rrhh_cargos",
+    "rrhh_personal",
+    "rrhh_movimientos_cargo",
+    "rrhh_planillas",
+    "rrhh_planilla_items",
+    "rrhh_descuentos",
     "auditoria",
   ]) {
     assert.match(schema, new RegExp(`"${table}"`));
@@ -133,6 +139,40 @@ test("keeps municipal data lazy, protected, and ChatGPT Sites compatible", async
   assert.match(hosting, /"project_id"/);
   assert.match(hosting, /"d1": null/);
   assert.doesNotMatch(`${page}\n${medical}\n${dbIndex}\n${schema}`, /postgresql:\/\//i);
+});
+
+test("protects the complete Human Resources workflow and press-only agenda", async () => {
+  const [page, hrUi, hrApi, hrService, accessServer, agendaUi, hrMigration, accessMigration] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/recursos-humanos.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/recursos-humanos/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/recursos-humanos.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/access-control.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/agenda.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../drizzle/0005_superb_black_cat.sql", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/migrations/20260825200500_rrhh_agenda_prensa_roles.sql", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(page, /Recursos Humanos/);
+  assert.match(page, /role\.code === "sigem_prensa"/);
+  assert.match(hrUi, /Planilla de personal/);
+  assert.match(hrUi, /Cargos y contratos/);
+  assert.match(hrUi, /Sueldos y salarios/);
+  assert.match(hrUi, /Consultor individual de línea/);
+  assert.match(hrUi, /Registrar descuento/);
+  assert.match(hrApi, /authorizeRequest\(request, "sigem\.hr\.read"\)/);
+  assert.match(hrApi, /sigem\.hr\.payroll/);
+  assert.match(hrService, /rrhhMovimientosCargo/);
+  assert.match(hrService, /recalcular|totalDescuentos|liquidoPagable/);
+  assert.match(hrMigration, /Chofer del Ejecutivo y Coordinador/);
+  assert.match(accessMigration, /'sigem_rrhh'/);
+  assert.match(accessMigration, /'sigem_prensa'/);
+  assert.match(accessMigration, /'sigem\.agenda\.read'/);
+  assert.match(accessMigration, /'sigem\.hr\.payroll'/);
+  assert.match(accessServer, /chofer\.\*ejecutivo\.\*coordinador/);
+  assert.match(agendaUi, /canManageCabinetAgenda/);
+  assert.match(agendaUi, /showForm && canManage/);
+  assert.doesNotMatch(`${hrUi}\n${hrApi}\n${hrService}`, /HEALTH_DATABASE_URL|postgresql:\/\//i);
 });
 
 test("enforces scoped institutional access with MFA and auditable roles", async () => {
