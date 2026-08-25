@@ -33,7 +33,7 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName: "Municipio Digital Cuatro Cañadas",
       locale: "es_BO",
       type: "website",
-      images: [{ url: `${origin}/og-premium-medico.png`, width: 1672, height: 941, alt: "Municipio Digital y fichas médicas virtuales de Cuatro Cañadas" }],
+      images: [{ url: `${origin}/escudo-gamcc.png`, width: 1072, height: 960, alt: "Municipio Digital de Cuatro Cañadas" }],
     },
     twitter: {
       card: "summary_large_image",
