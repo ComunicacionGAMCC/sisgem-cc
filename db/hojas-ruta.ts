@@ -1,4 +1,5 @@
 import { and, desc, eq, ilike, inArray, notInArray, or, sql } from "drizzle-orm";
+import { getMunicipalYear } from "../lib/municipal-date";
 import { getDb } from "./index";
 import {
   auditoria,
@@ -166,7 +167,7 @@ export async function obtenerSeguimiento(codigo: string) {
 
 async function siguienteCodigo() {
   const db = getDb();
-  const gestion = new Date().getFullYear();
+  const gestion = getMunicipalYear();
   const resultado = await db.execute(sql`
     insert into ${secuenciasCodigo} (gestion, ultimo, updated_at)
     values (${gestion}, 1, now())

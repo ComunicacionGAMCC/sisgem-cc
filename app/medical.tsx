@@ -1,7 +1,9 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { formatMunicipalDate } from "../lib/municipal-date";
 import { useAccess } from "./access";
+import { useMunicipalDate } from "./use-municipal-date";
 
 type Specialty = {
   id: string;
@@ -57,10 +59,9 @@ type Confirmation = {
 };
 
 function formatDate(date: string, compact = false) {
-  const value = new Date(`${date}T12:00:00`);
-  return new Intl.DateTimeFormat("es-BO", compact
+  return formatMunicipalDate(date, compact
     ? { weekday: "short", day: "numeric", month: "short" }
-    : { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(value);
+    : { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 }
 
 async function loadMedicalData(signal?: AbortSignal) {
@@ -71,6 +72,7 @@ async function loadMedicalData(signal?: AbortSignal) {
 }
 
 export function MedicalBookingCard() {
+  const municipalDate = useMunicipalDate();
   const [open, setOpen] = useState(false);
   const [data, setData] = useState<MedicalData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -202,7 +204,7 @@ export function MedicalBookingCard() {
                       <label className="wide">Nombre completo<input name="nombrePaciente" required minLength={5} autoComplete="name" placeholder="Nombres y apellidos" /></label>
                       <label>Cédula de identidad<input name="documento" required minLength={4} autoComplete="off" placeholder="Número de CI" /></label>
                       <label>Teléfono<input name="telefono" required minLength={7} inputMode="tel" autoComplete="tel" placeholder="Ej.: 7XXXXXXX" /></label>
-                      <label>Fecha de nacimiento <small>(opcional)</small><input name="fechaNacimiento" type="date" max={new Date().toISOString().slice(0, 10)} /></label>
+                      <label>Fecha de nacimiento <small>(opcional)</small><input name="fechaNacimiento" type="date" max={municipalDate ?? undefined} /></label>
                     </div>
                     <label className="medicalConsent"><input name="consentimiento" type="checkbox" required /><span>Autorizo el uso de estos datos únicamente para gestionar mi atención en el Hospital Municipal.</span></label>
                     <p className="medicalNotice"><b>Importante:</b> la ficha virtual no reemplaza emergencias. Si necesitas atención urgente, acude directamente al hospital.</p>
@@ -322,6 +324,7 @@ type RegisteredPatient = {
 
 function PatientRegistry() {
   const access = useAccess();
+  const municipalDate = useMunicipalDate();
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
@@ -368,7 +371,7 @@ function PatientRegistry() {
           <label>Tipo de documento<select name="documentType" defaultValue="CI"><option value="CI">Cédula de identidad</option><option value="CN">Certificado de nacimiento</option><option value="PASAPORTE">Pasaporte</option><option value="SIN_DOCUMENTO">Sin documento</option></select></label>
           <label>Número de documento<input name="documentNumber" required minLength={4} /></label>
           <label className="wide">Nombre completo<input name="fullName" required minLength={5} /></label>
-          <label>Fecha de nacimiento<input name="birthDate" type="date" max={new Date().toISOString().slice(0, 10)} /></label>
+          <label>Fecha de nacimiento<input name="birthDate" type="date" max={municipalDate ?? undefined} /></label>
           <label>Sexo<select name="sex" defaultValue=""><option value="">No especificado</option><option value="F">Femenino</option><option value="M">Masculino</option><option value="OTRO">Otro</option></select></label>
           <label>Teléfono<input name="phone" inputMode="tel" /></label>
           <label className="wide">Dirección<input name="address" /></label>

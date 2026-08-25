@@ -1,8 +1,10 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { addMunicipalDays, capitalizeDateLabel, formatMunicipalDate, getMunicipalYear, parseMunicipalIsoDate } from "../lib/municipal-date";
 import { AccessGate, AccessManagement, AccessProvider, useAccess } from "./access";
 import { MedicalBookingCard, MedicalModule } from "./medical";
+import { useMunicipalDate } from "./use-municipal-date";
 
 type InternalView = "inicio" | "hojas" | "fichas" | "accesos" | "contrataciones" | "agenda" | "transparencia";
 
@@ -73,6 +75,11 @@ export default function Home() {
 
 function HomeContent() {
   const access = useAccess();
+  const municipalDateKey = useMunicipalDate();
+  const municipalDate = useMemo(
+    () => municipalDateKey ? parseMunicipalIsoDate(municipalDateKey) : null,
+    [municipalDateKey],
+  );
   const [portal, setPortal] = useState<"citizen" | "internal">("citizen");
   const [internalView, setInternalView] = useState<InternalView>("inicio");
   const [notice, setNotice] = useState("");
@@ -212,6 +219,7 @@ function HomeContent() {
           setRouteModal("success");
           setRouteRefresh((value) => value + 1);
         }}
+        today={municipalDate}
       />
     );
   }
@@ -260,7 +268,9 @@ function HomeContent() {
               <TimelineItem done title="Solicitud recibida" detail="Secretaría General · 08:42" />
               <TimelineItem done title="Derivada a Comunicación" detail="Recibida · 09:18" />
               <TimelineItem active title="Trabajo en elaboración" detail="Actualizado hace 25 minutos" />
-              <TimelineItem title="Respuesta y cierre" detail="Fecha estimada: 6 de agosto" />
+              <TimelineItem title="Respuesta y cierre" detail={municipalDate
+                ? `Fecha estimada: ${formatMunicipalDate(addMunicipalDays(municipalDate, 2), { day: "numeric", month: "long" })}`
+                : "Fecha estimada: por confirmar"} />
             </div>
             <div className="heroCardFooter"><span>Tiempo estimado</span><strong>2 días hábiles</strong></div>
           </article>
@@ -303,7 +313,7 @@ function HomeContent() {
             <div><span className="resultCheck">✓</span><span><small>SOLICITUD ENCONTRADA · {trackingResult.code}</small><h3>{trackingResult.title}</h3><p>{trackingResult.sender} — {trackingResult.unit}</p></span></div>
             <span className={`liveBadge ${trackingResult.tone}`}>{trackingResult.status}</span>
             <div className="trackingEvents">
-              {trackingResult.events.map((event) => <article key={event.id}><i /><span><strong>{event.title}</strong><small>{event.description || event.unit || event.status}</small></span><time>{new Date(event.createdAt).toLocaleDateString("es-BO")}</time></article>)}
+              {trackingResult.events.map((event) => <article key={event.id}><i /><span><strong>{event.title}</strong><small>{event.description || event.unit || event.status}</small></span><time>{formatMunicipalDate(event.createdAt, { day: "2-digit", month: "2-digit", year: "numeric" })}</time></article>)}
             </div>
           </section>
         )}
@@ -331,7 +341,7 @@ function HowStep({ number, title, text }: { number: string; title: string; text:
   return <div><b>{number}</b><h3>{title}</h3><p>{text}</p></div>;
 }
 
-function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, setFilter, search, setSearch, visibleRoutes, allRoutes, routeLoading, routeDataLive, routeModal, setRouteModal, createdCode, routeCreated }: {
+function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, setFilter, search, setSearch, visibleRoutes, allRoutes, routeLoading, routeDataLive, routeModal, setRouteModal, createdCode, routeCreated, today }: {
   view: InternalView;
   setView: (view: InternalView) => void;
   openCitizen: () => void;
@@ -348,6 +358,7 @@ function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, se
   setRouteModal: (value: "form" | "success" | null) => void;
   createdCode: string;
   routeCreated: (code: string) => void;
+  today: Date | null;
 }) {
   const access = useAccess();
   const titles: Record<InternalView, string> = { inicio: "Panel de gestión", hojas: "Hojas de ruta", fichas: "Fichas médicas", accesos: "Usuarios y accesos", contrataciones: "Contrataciones", agenda: "Agenda institucional", transparencia: "Transparencia" };
@@ -373,13 +384,13 @@ function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, se
 
       <main className="internalMain">
         <header className="internalHeader"><div><span className="sectionKicker">MUNICIPIO DIGITAL</span><h1>{titles[view]}</h1></div><div className="headerActions"><span className="demoPill live" title={routeDataLive ? "Datos municipales conectados" : "Acceso institucional verificado"}><i /> Acceso protegido · 2FA</span><button className="iconButton" aria-label="Notificaciones">●<span className="notificationDot" /></button><button className="portalLink" onClick={openCitizen}>Ver portal ciudadano</button></div></header>
-        {view === "inicio" && <Dashboard setView={setView} openRouteModal={openRouteModal} items={allRoutes} userName={greetingName} />}
+        {view === "inicio" && <Dashboard setView={setView} openRouteModal={openRouteModal} items={allRoutes} userName={greetingName} today={today} />}
         {view === "hojas" && <RoutesModule openRouteModal={openRouteModal} filter={filter} setFilter={setFilter} search={search} setSearch={setSearch} visibleRoutes={visibleRoutes} allRoutes={allRoutes} loading={routeLoading} />}
         {view === "fichas" && <MedicalModule />}
         {view === "accesos" && <AccessManagement />}
         {view === "contrataciones" && <ProcurementModule openRouteModal={openRouteModal} />}
-        {view === "agenda" && <AgendaModule />}
-        {view === "transparencia" && <TransparencyModule />}
+        {view === "agenda" && <AgendaModule today={today} />}
+        {view === "transparencia" && <TransparencyModule today={today} />}
       </main>
       {routeModal && <RouteModal mode={routeModal} close={() => setRouteModal(null)} succeed={routeCreated} createdCode={createdCode} />}
     </div>
@@ -390,14 +401,20 @@ function SideButton({ active, icon, label, badge, onClick }: { active: boolean; 
   return <button className={active ? "active" : ""} onClick={onClick}><span className="navIcon">{icon}</span><span>{label}</span>{badge && <b>{badge}</b>}</button>;
 }
 
-function Dashboard({ setView, openRouteModal, items, userName }: { setView: (view: InternalView) => void; openRouteModal: () => void; items: readonly RouteItem[]; userName: string }) {
+function Dashboard({ setView, openRouteModal, items, userName, today }: { setView: (view: InternalView) => void; openRouteModal: () => void; items: readonly RouteItem[]; userName: string; today: Date | null }) {
   const pendientes = items.filter((item) => item.status !== "Finalizado" && item.status !== "Archivado");
   const finalizados = items.length - pendientes.length;
   const urgentes = items.filter((item) => item.priority === "urgente").length;
+  const dateLabel = today
+    ? capitalizeDateLabel(formatMunicipalDate(today, { weekday: "long", day: "numeric", month: "long" }))
+    : "Fecha actual";
+  const shortDateLabel = today
+    ? formatMunicipalDate(today, { day: "numeric", month: "long" })
+    : "fecha actual";
   return <>
-    <section className="welcomeRow"><div><p className="dateLine">jueves, 6 de agosto</p><h2>Buenos días, {userName}.</h2><p>Tienes <strong>3 asuntos prioritarios</strong> que requieren atención.</p></div><button className="primaryAction" onClick={openRouteModal}><span>＋</span>Nueva hoja de ruta</button></section>
+    <section className="welcomeRow"><div><p className="dateLine">{dateLabel}</p><h2>Buenos días, {userName}.</h2><p>Tienes <strong>3 asuntos prioritarios</strong> que requieren atención.</p></div><button className="primaryAction" onClick={openRouteModal}><span>＋</span>Nueva hoja de ruta</button></section>
     <section className="statGrid" aria-label="Resumen del trabajo"><StatCard color="blue" label="En mi bandeja" value={String(items.length)} note="Registros disponibles" /><StatCard color="orange" label="Prioridad urgente" value={String(urgentes)} note="Requieren atención" /><StatCard color="green" label="Finalizadas" value={String(finalizados)} note="En la bandeja actual" /><StatCard color="violet" label="Pendientes" value={String(pendientes.length)} note="En seguimiento" /></section>
-    <div className="dashboardGrid"><section className="panel"><PanelHeader eyebrow="HOJA DE RUTA" title="Requieren tu atención" action="Ver toda la bandeja →" onClick={() => setView("hojas")} /><RouteList items={pendientes.slice(0, 3)} /></section><section className="panel agendaPanel"><PanelHeader eyebrow="AGENDA DEL ALCALDE" title="Hoy, 4 de agosto" action="↗" onClick={() => setView("agenda")} /><AgendaList /><button className="subtleAction" onClick={() => setView("agenda")}>＋ Agendar audiencia</button></section></div>
+    <div className="dashboardGrid"><section className="panel"><PanelHeader eyebrow="HOJA DE RUTA" title="Requieren tu atención" action="Ver toda la bandeja →" onClick={() => setView("hojas")} /><RouteList items={pendientes.slice(0, 3)} /></section><section className="panel agendaPanel"><PanelHeader eyebrow="AGENDA DEL ALCALDE" title={`Hoy, ${shortDateLabel}`} action="↗" onClick={() => setView("agenda")} /><AgendaList /><button className="subtleAction" onClick={() => setView("agenda")}>＋ Agendar audiencia</button></section></div>
     <section className="panel procurementPanel"><PanelHeader eyebrow="CONTRATACIÓN EN CURSO" title="Servicio de impresión — Invitaciones aniversario municipal" action="CM-2026-0038" onClick={() => setView("contrataciones")} /><div className="stepTrack"><ProcessStep complete number="✓" title="Necesidad registrada" note="Unidad de Comunicación" /><ProcessStep complete number="✓" title="Certificación presupuestaria" note="CP-2026-0184 aprobada" /><ProcessStep number="3" title="Inicio de contratación" note="Pendiente de visto bueno" /><ProcessStep number="4" title="Orden de servicio" note="Aún no iniciada" /></div></section>
   </>;
 }
@@ -436,12 +453,20 @@ function ProcurementRow({ code, object, mode, status, amount }: { code: string; 
   return <div className="tableRow"><strong>{code}</strong><span>{object}</span><span>{mode}</span><i className="status progress">{status}</i><b>{amount}</b></div>;
 }
 
-function AgendaModule() {
-  return <section className="moduleView"><div className="moduleTitle"><div><h2>Agenda del alcalde</h2><p>Audiencias, reuniones, actos e inspecciones</p></div><button className="primaryAction"><span>＋</span>Agendar evento</button></div><div className="calendarStrip"><button aria-label="Semana anterior">‹</button>{[["LUN", "3"], ["MAR", "4"], ["MIÉ", "5"], ["JUE", "6"], ["VIE", "7"]].map(([day, number]) => <div className={day === "MAR" ? "active" : ""} key={day}><small>{day}</small><b>{number}</b></div>)}<button aria-label="Semana siguiente">›</button></div><section className="panel dayAgenda"><h3>Martes, 4 de agosto</h3>{events.map((event) => <article className="dayEvent" key={event.time}><time>{event.time}</time><i className={event.color} /><div><strong>{event.title}</strong><span>{event.place}</span></div><span>Confirmado</span></article>)}</section></section>;
+function AgendaModule({ today }: { today: Date | null }) {
+  const dayOfWeek = today?.getUTCDay() ?? 1;
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const week = today ? Array.from({ length: 5 }, (_, index) => addMunicipalDays(today, mondayOffset + index)) : [];
+  const selectedDate = today
+    ? capitalizeDateLabel(formatMunicipalDate(today, { weekday: "long", day: "numeric", month: "long" }))
+    : "Fecha actual";
+  return <section className="moduleView"><div className="moduleTitle"><div><h2>Agenda del alcalde</h2><p>Audiencias, reuniones, actos e inspecciones</p></div><button className="primaryAction"><span>＋</span>Agendar evento</button></div><div className="calendarStrip"><button aria-label="Semana anterior">‹</button>{week.map((date) => <div className={date.getUTCDate() === today?.getUTCDate() ? "active" : ""} key={date.toISOString()}><small>{formatMunicipalDate(date, { weekday: "short" }).replace(".", "").toUpperCase()}</small><b>{date.getUTCDate()}</b></div>)}<button aria-label="Semana siguiente">›</button></div><section className="panel dayAgenda"><h3>{selectedDate}</h3>{events.map((event) => <article className="dayEvent" key={event.time}><time>{event.time}</time><i className={event.color} /><div><strong>{event.title}</strong><span>{event.place}</span></div><span>Confirmado</span></article>)}</section></section>;
 }
 
-function TransparencyModule() {
-  return <section className="moduleView"><div className="moduleTitle"><div><h2>Transparencia municipal</h2><p>Información pública preparada para la ciudadanía</p></div><button className="primaryAction">Publicar actualización</button></div><section className="transparencyHero"><div><span>EJECUCIÓN PRESUPUESTARIA 2026</span><strong>62,8%</strong><p>Información demostrativa pendiente de conexión con la fuente oficial.</p></div><div className="donut"><span>63<small>%</small></span></div></section><div className="statGrid"><StatCard color="blue" label="Presupuesto vigente" value="Bs 84,2 M" note="Gestión 2026" /><StatCard color="green" label="Ejecutado" value="Bs 52,9 M" note="Al 4 de agosto" /><StatCard color="orange" label="Proyectos activos" value="38" note="12 con avance público" /><StatCard color="violet" label="Procesos publicados" value="117" note="Sincronización pendiente" /></div></section>;
+function TransparencyModule({ today }: { today: Date | null }) {
+  const year = today?.getUTCFullYear() ?? getMunicipalYear();
+  const dateLabel = today ? formatMunicipalDate(today, { day: "numeric", month: "long" }) : "fecha actual";
+  return <section className="moduleView"><div className="moduleTitle"><div><h2>Transparencia municipal</h2><p>Información pública preparada para la ciudadanía</p></div><button className="primaryAction">Publicar actualización</button></div><section className="transparencyHero"><div><span>EJECUCIÓN PRESUPUESTARIA {year}</span><strong>62,8%</strong><p>Información demostrativa pendiente de conexión con la fuente oficial.</p></div><div className="donut"><span>63<small>%</small></span></div></section><div className="statGrid"><StatCard color="blue" label="Presupuesto vigente" value="Bs 84,2 M" note={`Gestión ${year}`} /><StatCard color="green" label="Ejecutado" value="Bs 52,9 M" note={`Al ${dateLabel}`} /><StatCard color="orange" label="Proyectos activos" value="38" note="12 con avance público" /><StatCard color="violet" label="Procesos publicados" value="117" note="Sincronización pendiente" /></div></section>;
 }
 
 function RouteModal({ mode, close, succeed, createdCode }: { mode: "form" | "success"; close: () => void; succeed: (code: string) => void; createdCode: string }) {

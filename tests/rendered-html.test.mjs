@@ -45,7 +45,7 @@ test("server-renders the Municipio Digital portal", async () => {
 });
 
 test("keeps municipal data lazy, protected, and ChatGPT Sites compatible", async () => {
-  const [page, medical, dbIndex, schema, listApi, trackingApi, medicalApi, hosting] = await Promise.all([
+  const [page, medical, dbIndex, schema, listApi, trackingApi, medicalApi, hosting, municipalDate, dateHook, routeService] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/medical.tsx", import.meta.url), "utf8"),
     readFile(new URL("../db/index.ts", import.meta.url), "utf8"),
@@ -54,6 +54,9 @@ test("keeps municipal data lazy, protected, and ChatGPT Sites compatible", async
     readFile(new URL("../app/api/seguimiento/[codigo]/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/fichas-medicas/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
+    readFile(new URL("../lib/municipal-date.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/use-municipal-date.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/hojas-ruta.ts", import.meta.url), "utf8"),
   ]);
 
   assert.match(page, /fetch\("\/api\/hojas-ruta"/);
@@ -62,6 +65,10 @@ test("keeps municipal data lazy, protected, and ChatGPT Sites compatible", async
   assert.match(page, /profile\.fullName\.trim\(\)\.split/);
   assert.match(page, /Buenos días, \{userName\}/);
   assert.doesNotMatch(page, /Buenos días, Saúl/);
+  assert.match(municipalDate, /America\/La_Paz/);
+  assert.match(dateHook, /setInterval\(refresh, 60_000\)/);
+  assert.match(routeService, /getMunicipalYear\(\)/);
+  assert.doesNotMatch(`${page}\n${medical}`, /(?:jueves, 6 de agosto|Hoy, 4 de agosto|Martes, 4 de agosto|Al 4 de agosto|Fecha estimada: 6 de agosto)/i);
   assert.match(listApi, /export async function GET/);
   assert.match(listApi, /export async function POST/);
   assert.match(trackingApi, /obtenerSeguimiento/);
