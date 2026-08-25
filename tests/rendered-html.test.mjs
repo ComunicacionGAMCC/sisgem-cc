@@ -142,7 +142,7 @@ test("keeps municipal data lazy, protected, and ChatGPT Sites compatible", async
 });
 
 test("protects the complete Human Resources workflow and press-only agenda", async () => {
-  const [page, hrUi, hrApi, hrService, accessServer, agendaUi, hrMigration, accessMigration] = await Promise.all([
+  const [page, hrUi, hrApi, hrService, accessServer, agendaUi, hrMigration, accessMigration, fullHrControlMigration] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/recursos-humanos.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/api/recursos-humanos/route.ts", import.meta.url), "utf8"),
@@ -151,6 +151,7 @@ test("protects the complete Human Resources workflow and press-only agenda", asy
     readFile(new URL("../app/agenda.tsx", import.meta.url), "utf8"),
     readFile(new URL("../drizzle/0005_superb_black_cat.sql", import.meta.url), "utf8"),
     readFile(new URL("../supabase/migrations/20260825200500_rrhh_agenda_prensa_roles.sql", import.meta.url), "utf8"),
+    readFile(new URL("../supabase/migrations/20260825230033_grant_full_hr_control.sql", import.meta.url), "utf8"),
   ]);
 
   assert.match(page, /Recursos Humanos/);
@@ -169,6 +170,8 @@ test("protects the complete Human Resources workflow and press-only agenda", asy
   assert.match(accessMigration, /'sigem_prensa'/);
   assert.match(accessMigration, /'sigem\.agenda\.read'/);
   assert.match(accessMigration, /'sigem\.hr\.payroll'/);
+  assert.match(fullHrControlMigration, /permission\.code like 'sigem\.hr\.%'/);
+  assert.match(fullHrControlMigration, /'global'::access_control\.scope_type/);
   assert.match(accessServer, /chofer\.\*ejecutivo\.\*coordinador/);
   assert.match(agendaUi, /canManageCabinetAgenda/);
   assert.match(agendaUi, /showForm && canManage/);
