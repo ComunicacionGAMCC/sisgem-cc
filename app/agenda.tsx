@@ -11,6 +11,9 @@ import {
 import { useAccess } from "./access";
 
 type AgendaAccessContext = {
+  profile: {
+    jobTitle: string | null;
+  };
   permissions: string[];
   roles: Array<{
     module: "platform" | "sigem" | "health";
@@ -37,6 +40,9 @@ export function canAccessCabinetAgenda(context: AgendaAccessContext | null | und
     context.permissions.includes("platform.users.manage")
     || context.permissions.includes("sigem.users.manage")
   ) return true;
+  const hasSigemRole = context.roles.some((role) => role.module === "sigem");
+  if (hasSigemRole && /gabinete/i.test(context.profile.jobTitle ?? "")) return true;
+
   return context.roles.some((role) => (
     role.module === "sigem"
     && role.scopeType === "municipal_unit"

@@ -74,6 +74,7 @@ test("keeps municipal data lazy, protected, and ChatGPT Sites compatible", async
   assert.match(routeService, /getMunicipalYear\(\)/);
   assert.match(page, /AgendaSummary/);
   assert.match(page, /canAccessCabinetAgenda/);
+  assert.match(agenda, /context\.profile\.jobTitle/);
   assert.match(agenda, /type="date"/);
   assert.match(agenda, /moveWeek\(-7\)/);
   assert.match(agenda, /moveWeek\(7\)/);
@@ -85,6 +86,7 @@ test("keeps municipal data lazy, protected, and ChatGPT Sites compatible", async
   assert.match(agendaApi, /export async function POST/);
   assert.match(agendaApi, /authorizeRequest\(request, "sigem\.routes\.read"\)/);
   assert.match(agendaApi, /requireCabinetAgendaAccess\(context\)/);
+  assert.match(accessServer, /context\.profile\.jobTitle/);
   assert.match(accessServer, /La agenda del alcalde.*Secretar.*de Gabinete/);
   assert.doesNotMatch(page, /directores|Central 4 Este|avance de obra/);
   assert.doesNotMatch(`${page}\n${medical}`, /(?:jueves, 6 de agosto|Hoy, 4 de agosto|Martes, 4 de agosto|Al 4 de agosto|Fecha estimada: 6 de agosto)/i);
