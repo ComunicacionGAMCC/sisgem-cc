@@ -39,7 +39,7 @@ export async function generateMetadata(): Promise<Metadata> {
       card: "summary_large_image",
       title: "Municipio Digital | Cuatro Cañadas",
       description: "Una gestión para todos. Servicios y seguimiento digital del GAMCC.",
-      images: [`${origin}/og-premium-medico.png`],
+      images: [`${origin}/escudo-gamcc.png`],
     },
   };
 }
