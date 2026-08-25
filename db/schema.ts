@@ -62,6 +62,33 @@ export const unidades = pgTable(
   (table) => [uniqueIndex("unidades_codigo_uidx").on(table.codigo)],
 );
 
+export const cargosOrganigrama = pgTable(
+  "cargos_organigrama",
+  {
+    id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+    codigo: varchar("codigo", { length: 30 }).notNull(),
+    unidadId: uuid("unidad_id")
+      .notNull()
+      .references(() => unidades.id, { onDelete: "restrict" }),
+    superiorCodigo: varchar("superior_codigo", { length: 30 }),
+    nombre: varchar("nombre", { length: 240 }).notNull(),
+    nivel: varchar("nivel", { length: 30 }).notNull(),
+    gestion: integer("gestion").default(2025).notNull(),
+    orden: integer("orden").default(0).notNull(),
+    activo: boolean("activo").default(true).notNull(),
+    ...auditColumns,
+  },
+  (table) => [
+    uniqueIndex("cargos_organigrama_codigo_uidx").on(table.codigo),
+    index("cargos_organigrama_unidad_idx").on(table.unidadId, table.activo),
+    index("cargos_organigrama_superior_idx").on(table.superiorCodigo),
+    check(
+      "cargos_organigrama_nivel_check",
+      sql`${table.nivel} in ('ejecutivo', 'asesoria', 'apoyo', 'direccion', 'jefatura', 'profesional', 'tecnico', 'auxiliar', 'operativo')`,
+    ),
+  ],
+);
+
 export const funcionarios = pgTable(
   "funcionarios",
   {

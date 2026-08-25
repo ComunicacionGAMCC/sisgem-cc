@@ -381,12 +381,23 @@ type ManagedUserDetails = ManagedUser & {
 };
 
 type MunicipalUnit = { id: string; code: string; name: string };
+type OrganizationalPosition = {
+  id: number;
+  code: string;
+  name: string;
+  level: string;
+  parentCode: string | null;
+  unitId: string;
+  unitCode: string;
+  unitName: string;
+};
 
 export function AccessManagement() {
   const access = useAccess();
   const [roles, setRoles] = useState<RoleCatalog[]>([]);
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [units, setUnits] = useState<MunicipalUnit[]>([]);
+  const [positions, setPositions] = useState<OrganizationalPosition[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [roleCode, setRoleCode] = useState("");
@@ -395,6 +406,8 @@ export function AccessManagement() {
   const [selectedUser, setSelectedUser] = useState<ManagedUserDetails | null>(null);
   const [editingRoleCode, setEditingRoleCode] = useState("");
   const [editingUnitId, setEditingUnitId] = useState("");
+  const [positionCode, setPositionCode] = useState("");
+  const [editingPositionCode, setEditingPositionCode] = useState("");
   const [userActionLoading, setUserActionLoading] = useState(false);
   const [userActionMessage, setUserActionMessage] = useState("");
 
@@ -418,8 +431,14 @@ export function AccessManagement() {
       setRoleCode((current) => current || nextRoles[0]?.code || "");
       setUsers((usersData ?? []) as ManagedUser[]);
       if (unitsResponse?.ok) {
-        const result = (await unitsResponse.json()) as { units: MunicipalUnit[] };
-        if (active) setUnits(result.units);
+        const result = (await unitsResponse.json()) as {
+          units: MunicipalUnit[];
+          positions: OrganizationalPosition[];
+        };
+        if (active) {
+          setUnits(result.units);
+          setPositions(result.positions);
+        }
       }
       if (active) setLoading(false);
     }
@@ -429,8 +448,12 @@ export function AccessManagement() {
 
   const selectedRole = roles.find((role) => role.code === roleCode);
   const requiresUnit = selectedRole?.module === "sigem" && !["sigem_admin", "super_admin"].includes(roleCode);
+  const requiresPlantPosition = selectedRole?.module === "sigem" && roleCode !== "super_admin";
   const editingRole = roles.find((role) => role.code === editingRoleCode);
   const editingRequiresUnit = editingRole?.module === "sigem" && !["sigem_admin", "super_admin"].includes(editingRoleCode);
+  const editingRequiresPlantPosition = editingRole?.module === "sigem" && editingRoleCode !== "super_admin";
+  const selectedPosition = positions.find((position) => position.code === positionCode);
+  const editingPosition = positions.find((position) => position.code === editingPositionCode);
 
   async function createManagedUser(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -441,6 +464,10 @@ export function AccessManagement() {
     const passwordConfirmation = String(form.get("passwordConfirmation") ?? "");
     if (requiresUnit && !unit) {
       setMessage("Selecciona el área municipal correspondiente.");
+      return;
+    }
+    if (requiresPlantPosition && !selectedPosition) {
+      setMessage("Selecciona el cargo de planta según el organigrama.");
       return;
     }
     if (password !== passwordConfirmation) {
@@ -457,7 +484,7 @@ export function AccessManagement() {
       body: JSON.stringify({
         email: form.get("email"),
         fullName: form.get("fullName"),
-        jobTitle: form.get("jobTitle"),
+        jobTitle: requiresPlantPosition ? selectedPosition?.name : form.get("jobTitle"),
         password,
         roleCode,
         scopeType: requiresUnit ? "municipal_unit" : "global",
@@ -473,6 +500,7 @@ export function AccessManagement() {
     setMessage(`Usuario ${result.email} creado y habilitado. Entrega sus credenciales de forma privada.`);
     event.currentTarget.reset();
     setUnitId("");
+    setPositionCode("");
     setLoading(true);
     setRefreshIndex((value) => value + 1);
   }
@@ -492,9 +520,21 @@ export function AccessManagement() {
       return;
     }
     const primaryRole = result.user.roles[0];
+    const normalizedJobTitle = result.user.jobTitle?.toLocaleLowerCase("es") ?? "";
+    const matchingPosition = positions.find((position) => (
+      position.name.toLocaleLowerCase("es") === normalizedJobTitle
+      || (normalizedJobTitle.includes("gabinete") && position.name.toLocaleLowerCase("es").includes("gabinete"))
+    ));
+    const primaryRoleRequiresUnit = primaryRole?.module === "sigem"
+      && !["sigem_admin", "super_admin"].includes(primaryRole.code);
     setSelectedUser(result.user);
     setEditingRoleCode(primaryRole?.code ?? "");
-    setEditingUnitId(primaryRole?.scopeType === "municipal_unit" ? primaryRole.scopeId ?? "" : "");
+    setEditingUnitId(
+      primaryRoleRequiresUnit && matchingPosition
+        ? matchingPosition.unitId
+        : primaryRole?.scopeType === "municipal_unit" ? primaryRole.scopeId ?? "" : "",
+    );
+    setEditingPositionCode(matchingPosition?.code ?? "");
     setUserActionLoading(false);
   }
 
@@ -529,11 +569,15 @@ export function AccessManagement() {
       setUserActionMessage("Selecciona el área municipal correspondiente.");
       return;
     }
+    if (editingRequiresPlantPosition && !editingPosition) {
+      setUserActionMessage("Selecciona el cargo de planta según el organigrama.");
+      return;
+    }
     const result = await userAction({
       action: "update",
       email: form.get("email"),
       fullName: form.get("fullName"),
-      jobTitle: form.get("jobTitle"),
+      jobTitle: editingRequiresPlantPosition ? editingPosition?.name : form.get("jobTitle"),
       roleCode: editingRoleCode,
       scopeType: editingRequiresUnit ? "municipal_unit" : "global",
       scopeId: editingRequiresUnit ? unit?.id : null,
@@ -594,11 +638,16 @@ export function AccessManagement() {
           <header><span>NUEVO ACCESO</span><h3>Crear usuario</h3><p>Define sus credenciales y asigna el rol y área que le corresponden.</p></header>
           <form onSubmit={createManagedUser}>
             <label>Nombre completo<input name="fullName" required minLength={5} /></label>
-            <div className="accessFormGrid"><label>Correo institucional<input name="email" type="email" required /></label><label>Cargo<input name="jobTitle" required /></label></div>
+            <label>Correo institucional<input name="email" type="email" required /></label>
             <div className="accessFormGrid"><label>Contraseña inicial<input name="password" type="password" autoComplete="new-password" required minLength={12} maxLength={128} /></label><label>Confirmar contraseña<input name="passwordConfirmation" type="password" autoComplete="new-password" required minLength={12} maxLength={128} /></label></div>
-            <label>Tipo de acceso<select value={roleCode} onChange={(event) => { setRoleCode(event.target.value); setUnitId(""); }} required>{roles.map((role) => <option key={role.code} value={role.code}>{role.name}</option>)}</select></label>
+            <label>Tipo de acceso<select value={roleCode} onChange={(event) => { setRoleCode(event.target.value); setUnitId(""); setPositionCode(""); }} required>{roles.map((role) => <option key={role.code} value={role.code}>{role.name}</option>)}</select></label>
             {selectedRole && <p className="roleDescription">{selectedRole.description}{selectedRole.requiresMfa ? " · Requiere verificación en dos pasos." : ""}</p>}
-            {requiresUnit && <label>Área o unidad municipal<select value={unitId} onChange={(event) => setUnitId(event.target.value)} required><option value="">Seleccionar área…</option>{units.map((unit) => <option key={unit.id} value={unit.id}>{unit.code} · {unit.name}</option>)}</select></label>}
+            {requiresPlantPosition ? (
+              <label>Cargo de planta según organigrama<select value={positionCode} onChange={(event) => { const nextPosition = positions.find((position) => position.code === event.target.value); setPositionCode(event.target.value); if (nextPosition && requiresUnit) setUnitId(nextPosition.unitId); }} required><option value="">Seleccionar cargo…</option>{units.filter((unit) => positions.some((position) => position.unitId === unit.id)).map((unit) => <optgroup key={unit.id} label={`${unit.code} · ${unit.name}`}>{positions.filter((position) => position.unitId === unit.id).map((position) => <option key={position.code} value={position.code}>{position.name}</option>)}</optgroup>)}</select></label>
+            ) : (
+              <label>Cargo<input name="jobTitle" defaultValue={roleCode === "super_admin" ? "Superadministrador" : ""} required /></label>
+            )}
+            {requiresUnit && <label>Área o unidad municipal<select value={unitId} onChange={(event) => { setUnitId(event.target.value); if (selectedPosition?.unitId !== event.target.value) setPositionCode(""); }} required><option value="">Seleccionar área…</option>{units.map((unit) => <option key={unit.id} value={unit.id}>{unit.code} · {unit.name}</option>)}</select></label>}
             {message && <p className="accessMessage" role="status">{message}</p>}
             <button className="accessPrimary" disabled={loading || !roleCode}>Crear usuario y asignar acceso</button>
           </form>
@@ -641,10 +690,14 @@ export function AccessManagement() {
             <form className="accessEditForm" onSubmit={updateManagedUser}>
               <h3>Editar datos y permisos</h3>
               <div className="accessFormGrid"><label>Nombre completo<input name="fullName" defaultValue={selectedUser.fullName} required minLength={5} /></label><label>Correo institucional<input name="email" type="email" defaultValue={selectedUser.email} required /></label></div>
-              <label>Cargo<input name="jobTitle" defaultValue={selectedUser.jobTitle ?? ""} /></label>
-              <label>Tipo de acceso<select value={editingRoleCode} onChange={(event) => { setEditingRoleCode(event.target.value); setEditingUnitId(""); }} disabled={selectedIsSuperAdmin}>{roles.map((role) => <option key={role.code} value={role.code}>{role.name}</option>)}</select></label>
+              <label>Tipo de acceso<select value={editingRoleCode} onChange={(event) => { setEditingRoleCode(event.target.value); setEditingUnitId(""); setEditingPositionCode(""); }} disabled={selectedIsSuperAdmin}>{roles.map((role) => <option key={role.code} value={role.code}>{role.name}</option>)}</select></label>
               {editingRole && <p className="roleDescription">{editingRole.description}{editingRole.requiresMfa ? " · Requiere verificación en dos pasos." : ""}</p>}
-              {editingRequiresUnit && <label>Área o unidad municipal<select value={editingUnitId} onChange={(event) => setEditingUnitId(event.target.value)} required><option value="">Seleccionar área…</option>{units.map((unit) => <option key={unit.id} value={unit.id}>{unit.code} · {unit.name}</option>)}</select></label>}
+              {editingRequiresPlantPosition ? (
+                <label>Cargo de planta según organigrama<select value={editingPositionCode} onChange={(event) => { const nextPosition = positions.find((position) => position.code === event.target.value); setEditingPositionCode(event.target.value); if (nextPosition && editingRequiresUnit) setEditingUnitId(nextPosition.unitId); }} required><option value="">Seleccionar cargo…</option>{units.filter((unit) => positions.some((position) => position.unitId === unit.id)).map((unit) => <optgroup key={unit.id} label={`${unit.code} · ${unit.name}`}>{positions.filter((position) => position.unitId === unit.id).map((position) => <option key={position.code} value={position.code}>{position.name}</option>)}</optgroup>)}</select></label>
+              ) : (
+                <label>Cargo<input name="jobTitle" defaultValue={selectedUser.jobTitle ?? ""} required /></label>
+              )}
+              {editingRequiresUnit && <label>Área o unidad municipal<select value={editingUnitId} onChange={(event) => { setEditingUnitId(event.target.value); if (editingPosition?.unitId !== event.target.value) setEditingPositionCode(""); }} required><option value="">Seleccionar área…</option>{units.map((unit) => <option key={unit.id} value={unit.id}>{unit.code} · {unit.name}</option>)}</select></label>}
               <button className="accessPrimary" disabled={userActionLoading}>{userActionLoading ? "Guardando…" : "Guardar cambios"}</button>
             </form>
 

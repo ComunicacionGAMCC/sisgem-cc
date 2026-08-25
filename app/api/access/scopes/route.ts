@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AccessDeniedError, authorizeRequest } from "../../../../db/access-control";
-import { listarUnidadesActivas } from "../../../../db/unidades";
+import { listarCargosOrganigramaActivos, listarUnidadesActivas } from "../../../../db/unidades";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   try {
     await authorizeRequest(request, "sigem.users.manage");
-    return NextResponse.json({ units: await listarUnidadesActivas() });
+    const [units, positions] = await Promise.all([
+      listarUnidadesActivas(),
+      listarCargosOrganigramaActivos(),
+    ]);
+    return NextResponse.json({ units, positions });
   } catch (error) {
     if (error instanceof AccessDeniedError) {
       return NextResponse.json({ error: error.message }, { status: error.status });

@@ -45,7 +45,7 @@ test("server-renders the Municipio Digital portal", async () => {
 });
 
 test("keeps municipal data lazy, protected, and ChatGPT Sites compatible", async () => {
-  const [page, agenda, agendaService, agendaApi, accessServer, medical, dbIndex, schema, listApi, trackingApi, medicalApi, hosting, municipalDate, dateHook, routeService] = await Promise.all([
+  const [page, agenda, agendaService, agendaApi, accessServer, medical, dbIndex, schema, orgMigration, listApi, trackingApi, medicalApi, hosting, municipalDate, dateHook, routeService] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/agenda.tsx", import.meta.url), "utf8"),
     readFile(new URL("../db/agenda.ts", import.meta.url), "utf8"),
@@ -54,6 +54,7 @@ test("keeps municipal data lazy, protected, and ChatGPT Sites compatible", async
     readFile(new URL("../app/medical.tsx", import.meta.url), "utf8"),
     readFile(new URL("../db/index.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../drizzle/0004_chunky_wasp.sql", import.meta.url), "utf8"),
     readFile(new URL("../app/api/hojas-ruta/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/seguimiento/[codigo]/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/fichas-medicas/route.ts", import.meta.url), "utf8"),
@@ -103,6 +104,7 @@ test("keeps municipal data lazy, protected, and ChatGPT Sites compatible", async
 
   for (const table of [
     "unidades",
+    "cargos_organigrama",
     "funcionarios",
     "solicitantes",
     "hojas_de_ruta",
@@ -115,6 +117,18 @@ test("keeps municipal data lazy, protected, and ChatGPT Sites compatible", async
   }
 
   assert.doesNotMatch(schema, /especialidades_medicas|cupos_medicos|fichas_medicas/);
+  for (const direction of [
+    "Dirección de Finanzas",
+    "Dirección de Recaudaciones",
+    "Dirección de Obras Públicas",
+    "Dirección de Catastro Urbano y Rural",
+    "Dirección de Desarrollo Agropecuario y Medio Ambiente",
+    "Dirección de Desarrollo Humano y Social",
+  ]) {
+    assert.match(orgMigration, new RegExp(direction));
+  }
+  assert.match(orgMigration, /Asesor Legal/);
+  assert.match(orgMigration, /Asesor de Desarrollo Normativo/);
 
   assert.match(hosting, /"project_id"/);
   assert.match(hosting, /"d1": null/);
@@ -180,6 +194,8 @@ test("enforces scoped institutional access with MFA and auditable roles", async 
   assert.match(accessUi, /Ver y administrar/);
   assert.match(accessUi, /Cambiar contraseña/);
   assert.match(accessUi, /Desactivar usuario/);
+  assert.match(accessUi, /Cargo de planta según organigrama/);
+  assert.match(accessUi, /positions\.filter/);
   assert.doesNotMatch(`${accessUi}\n${accessServer}\n${userApi}`, /service_role|HEALTH_SUPABASE_SECRET_KEY/);
 });
 
