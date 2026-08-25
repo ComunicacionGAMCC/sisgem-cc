@@ -122,16 +122,21 @@ test("keeps municipal data lazy, protected, and ChatGPT Sites compatible", async
 });
 
 test("enforces scoped institutional access with MFA and auditable roles", async () => {
-  const [accessUi, accessServer, userApi, accessMigration, bootstrapMigration, bootstrapScript] = await Promise.all([
+  const [accessUi, accessServer, userApi, managedUserApi, accessMigration, bootstrapMigration, managementMigration, bootstrapScript] = await Promise.all([
     readFile(new URL("../app/access.tsx", import.meta.url), "utf8"),
     readFile(new URL("../db/access-control.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/access/users/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/access/users/[userId]/route.ts", import.meta.url), "utf8"),
     readFile(
       new URL("../supabase/migrations/20260824201726_access_control.sql", import.meta.url),
       "utf8",
     ),
     readFile(
       new URL("../supabase/migrations/20260824223407_allow_two_super_admin_bootstrap.sql", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../supabase/migrations/20260825114139_super_admin_manage_users.sql", import.meta.url),
       "utf8",
     ),
     readFile(new URL("../scripts/bootstrap-superadmins.ts", import.meta.url), "utf8"),
@@ -155,15 +160,26 @@ test("enforces scoped institutional access with MFA and auditable roles", async 
   assert.match(userApi, /email_confirm: true/);
   assert.match(userApi, /auth\.admin\.deleteUser/);
   assert.doesNotMatch(userApi, /inviteUserByEmail/);
+  assert.match(managedUserApi, /platform\.users\.manage/);
+  assert.match(managedUserApi, /auth\.admin\.updateUserById/);
+  assert.match(managedUserApi, /access_manage_user/);
+  assert.match(managedUserApi, /access_record_password_change/);
   assert.match(accessMigration, /access_bootstrap_super_admin/);
   assert.match(accessMigration, /force row level security/);
   assert.match(accessMigration, /audit_events/);
   assert.match(bootstrapMigration, /pg_advisory_xact_lock/);
   assert.match(bootstrapMigration, /active_super_admins >= 2/);
   assert.match(bootstrapMigration, /to service_role/);
+  assert.match(managementMigration, /access_control\.has_role\('super_admin'\)/);
+  assert.match(managementMigration, /No puedes desactivar tu propia cuenta/);
+  assert.match(managementMigration, /password_changed_by_admin/);
+  assert.match(managementMigration, /revoke all on function public\.access_manage_user/);
   assert.match(bootstrapScript, /inviteUserByEmail/);
   assert.match(bootstrapScript, /\?access=1/);
   assert.match(accessUi, /Crear usuario y asignar acceso/);
+  assert.match(accessUi, /Ver y administrar/);
+  assert.match(accessUi, /Cambiar contraseña/);
+  assert.match(accessUi, /Desactivar usuario/);
   assert.doesNotMatch(`${accessUi}\n${accessServer}\n${userApi}`, /service_role|HEALTH_SUPABASE_SECRET_KEY/);
 });
 

@@ -374,6 +374,12 @@ type ManagedUser = {
   roles: AccessRole[];
 };
 
+type ManagedUserDetails = ManagedUser & {
+  createdAt: string;
+  lastSignInAt: string | null;
+  emailConfirmedAt: string | null;
+};
+
 type MunicipalUnit = { id: string; code: string; name: string };
 
 export function AccessManagement() {
@@ -386,8 +392,14 @@ export function AccessManagement() {
   const [roleCode, setRoleCode] = useState("");
   const [unitId, setUnitId] = useState("");
   const [refreshIndex, setRefreshIndex] = useState(0);
+  const [selectedUser, setSelectedUser] = useState<ManagedUserDetails | null>(null);
+  const [editingRoleCode, setEditingRoleCode] = useState("");
+  const [editingUnitId, setEditingUnitId] = useState("");
+  const [userActionLoading, setUserActionLoading] = useState(false);
+  const [userActionMessage, setUserActionMessage] = useState("");
 
   const canManageSigem = access.hasPermission("sigem.users.manage");
+  const canManagePlatform = access.hasPermission("platform.users.manage");
   useEffect(() => {
     if (!access.session) return;
     let active = true;
@@ -417,6 +429,8 @@ export function AccessManagement() {
 
   const selectedRole = roles.find((role) => role.code === roleCode);
   const requiresUnit = selectedRole?.module === "sigem" && !["sigem_admin", "super_admin"].includes(roleCode);
+  const editingRole = roles.find((role) => role.code === editingRoleCode);
+  const editingRequiresUnit = editingRole?.module === "sigem" && !["sigem_admin", "super_admin"].includes(editingRoleCode);
 
   async function createManagedUser(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -463,6 +477,112 @@ export function AccessManagement() {
     setRefreshIndex((value) => value + 1);
   }
 
+  async function openUserDetails(user: ManagedUser) {
+    if (!access.session || !canManagePlatform) return;
+    setUserActionLoading(true);
+    setUserActionMessage("");
+    const response = await fetch(`/api/access/users/${user.id}`, {
+      headers: { Authorization: `Bearer ${access.session.access_token}` },
+      cache: "no-store",
+    });
+    const result = (await response.json()) as { user?: ManagedUserDetails; error?: string };
+    if (!response.ok || !result.user) {
+      setMessage(result.error || "No se pudieron consultar los detalles del usuario.");
+      setUserActionLoading(false);
+      return;
+    }
+    const primaryRole = result.user.roles[0];
+    setSelectedUser(result.user);
+    setEditingRoleCode(primaryRole?.code ?? "");
+    setEditingUnitId(primaryRole?.scopeType === "municipal_unit" ? primaryRole.scopeId ?? "" : "");
+    setUserActionLoading(false);
+  }
+
+  async function userAction(payload: Record<string, unknown>) {
+    if (!access.session || !selectedUser) return null;
+    setUserActionLoading(true);
+    setUserActionMessage("");
+    const response = await fetch(`/api/access/users/${selectedUser.id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${access.session.access_token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    const result = (await response.json()) as { error?: string; updated?: boolean; active?: boolean };
+    if (!response.ok) {
+      setUserActionMessage(result.error || "No se pudo completar la operación.");
+      setUserActionLoading(false);
+      return null;
+    }
+    setUserActionLoading(false);
+    return result;
+  }
+
+  async function updateManagedUser(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedUser) return;
+    const form = new FormData(event.currentTarget);
+    const unit = units.find((item) => item.id === editingUnitId);
+    if (editingRequiresUnit && !unit) {
+      setUserActionMessage("Selecciona el área municipal correspondiente.");
+      return;
+    }
+    const result = await userAction({
+      action: "update",
+      email: form.get("email"),
+      fullName: form.get("fullName"),
+      jobTitle: form.get("jobTitle"),
+      roleCode: editingRoleCode,
+      scopeType: editingRequiresUnit ? "municipal_unit" : "global",
+      scopeId: editingRequiresUnit ? unit?.id : null,
+      scopeLabel: editingRequiresUnit ? `${unit?.code} · ${unit?.name}` : null,
+    });
+    if (!result) return;
+    setUserActionMessage("Datos y permisos actualizados correctamente.");
+    setLoading(true);
+    setRefreshIndex((value) => value + 1);
+  }
+
+  async function changeManagedPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    const password = String(form.get("password") ?? "");
+    const confirmation = String(form.get("passwordConfirmation") ?? "");
+    if (password !== confirmation) {
+      setUserActionMessage("Las contraseñas no coinciden.");
+      return;
+    }
+    const result = await userAction({ action: "password", password });
+    if (!result) return;
+    formElement.reset();
+    setUserActionMessage("Contraseña cambiada. Entrégala al usuario de forma privada.");
+  }
+
+  async function toggleManagedUser() {
+    if (!selectedUser) return;
+    const result = await userAction({ action: "set_active", active: !selectedUser.active });
+    if (!result) return;
+    setSelectedUser((current) => current ? { ...current, active: !current.active } : current);
+    setUserActionMessage(selectedUser.active ? "Usuario desactivado correctamente." : "Usuario reactivado correctamente.");
+    setLoading(true);
+    setRefreshIndex((value) => value + 1);
+  }
+
+  function formatAccessDate(value: string | null) {
+    if (!value) return "Sin registro";
+    return new Intl.DateTimeFormat("es-BO", {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: "America/La_Paz",
+    }).format(new Date(value));
+  }
+
+  const selectedIsSuperAdmin = selectedUser?.roles.some((role) => role.code === "super_admin") ?? false;
+  const selectedIsCurrentUser = selectedUser?.id === access.context?.profile.id;
+
   return (
     <div className="accessModule moduleView">
       <section className="accessModuleHero">
@@ -486,10 +606,64 @@ export function AccessManagement() {
         <section className="panel accessUsersPanel">
           <header><span>DIRECTORIO ACTIVO</span><h3>Usuarios administrados</h3><p>{users.length} cuenta{users.length === 1 ? "" : "s"} visible{users.length === 1 ? "" : "s"} según tu ámbito.</p></header>
           {loading && <p className="accessEmpty">Cargando directorio…</p>}
-          {!loading && users.map((user) => <article key={user.id}><span className="userInitials">{user.fullName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("")}</span><div><strong>{user.fullName}</strong><small>{user.jobTitle || user.email}</small><div className="userRoles">{user.roles.map((role) => <em key={`${role.code}-${role.scopeId ?? "global"}`}>{role.name}{role.scopeLabel ? ` · ${role.scopeLabel}` : ""}</em>)}</div></div><b className={user.active ? "active" : "inactive"}>{user.active ? "Activo" : "Inactivo"}</b></article>)}
+          {!loading && users.map((user) => (
+            <article key={user.id}>
+              <span className="userInitials">{user.fullName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("")}</span>
+              <div>
+                <strong>{user.fullName}</strong>
+                <small>{user.jobTitle || user.email}</small>
+                <div className="userRoles">{user.roles.map((role) => <em key={`${role.code}-${role.scopeId ?? "global"}`}>{role.name}{role.scopeLabel ? ` · ${role.scopeLabel}` : ""}</em>)}</div>
+              </div>
+              <div className="userDirectoryActions">
+                <b className={user.active ? "active" : "inactive"}>{user.active ? "Activo" : "Inactivo"}</b>
+                {canManagePlatform && <button type="button" onClick={() => openUserDetails(user)} disabled={userActionLoading}>Ver y administrar</button>}
+              </div>
+            </article>
+          ))}
           {!loading && !users.length && <p className="accessEmpty">Aún no hay usuarios asignados en este ámbito.</p>}
         </section>
       </div>
+
+      {selectedUser && (
+        <div className="accessUserModalBackdrop" role="presentation">
+          <section className="accessUserModal" role="dialog" aria-modal="true" aria-labelledby="managed-user-title">
+            <header>
+              <div><span>DETALLE DEL USUARIO</span><h2 id="managed-user-title">{selectedUser.fullName}</h2><p>{selectedUser.email}</p></div>
+              <button type="button" onClick={() => setSelectedUser(null)} aria-label="Cerrar">×</button>
+            </header>
+            <div className="accessUserFacts">
+              <div><small>Identificador</small><b>{selectedUser.id}</b></div>
+              <div><small>Cuenta creada</small><b>{formatAccessDate(selectedUser.createdAt)}</b></div>
+              <div><small>Último ingreso</small><b>{formatAccessDate(selectedUser.lastSignInAt)}</b></div>
+              <div><small>Correo verificado</small><b>{selectedUser.emailConfirmedAt ? "Sí" : "No"}</b></div>
+            </div>
+
+            <form className="accessEditForm" onSubmit={updateManagedUser}>
+              <h3>Editar datos y permisos</h3>
+              <div className="accessFormGrid"><label>Nombre completo<input name="fullName" defaultValue={selectedUser.fullName} required minLength={5} /></label><label>Correo institucional<input name="email" type="email" defaultValue={selectedUser.email} required /></label></div>
+              <label>Cargo<input name="jobTitle" defaultValue={selectedUser.jobTitle ?? ""} /></label>
+              <label>Tipo de acceso<select value={editingRoleCode} onChange={(event) => { setEditingRoleCode(event.target.value); setEditingUnitId(""); }} disabled={selectedIsSuperAdmin}>{roles.map((role) => <option key={role.code} value={role.code}>{role.name}</option>)}</select></label>
+              {editingRole && <p className="roleDescription">{editingRole.description}{editingRole.requiresMfa ? " · Requiere verificación en dos pasos." : ""}</p>}
+              {editingRequiresUnit && <label>Área o unidad municipal<select value={editingUnitId} onChange={(event) => setEditingUnitId(event.target.value)} required><option value="">Seleccionar área…</option>{units.map((unit) => <option key={unit.id} value={unit.id}>{unit.code} · {unit.name}</option>)}</select></label>}
+              <button className="accessPrimary" disabled={userActionLoading}>{userActionLoading ? "Guardando…" : "Guardar cambios"}</button>
+            </form>
+
+            <form className="accessPasswordForm" onSubmit={changeManagedPassword}>
+              <h3>Cambiar contraseña</h3>
+              <p>La nueva contraseña se aplica directamente; el usuario no necesita revisar su correo.</p>
+              <div className="accessFormGrid"><label>Nueva contraseña<input name="password" type="password" autoComplete="new-password" required minLength={12} maxLength={128} /></label><label>Confirmar contraseña<input name="passwordConfirmation" type="password" autoComplete="new-password" required minLength={12} maxLength={128} /></label></div>
+              <button type="submit" disabled={userActionLoading}>{userActionLoading ? "Aplicando…" : "Cambiar contraseña"}</button>
+            </form>
+
+            {userActionMessage && <p className="accessMessage" role="status">{userActionMessage}</p>}
+            <footer>
+              <button type="button" className={selectedUser.active ? "danger" : "reactivate"} onClick={toggleManagedUser} disabled={userActionLoading || selectedIsCurrentUser || selectedIsSuperAdmin}>{selectedUser.active ? "Desactivar usuario" : "Reactivar usuario"}</button>
+              {(selectedIsCurrentUser || selectedIsSuperAdmin) && <small>Las cuentas superadministradoras deben permanecer activas.</small>}
+              <button type="button" onClick={() => setSelectedUser(null)}>Cerrar</button>
+            </footer>
+          </section>
+        </div>
+      )}
     </div>
   );
 }
