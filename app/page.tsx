@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { addMunicipalDays, capitalizeDateLabel, formatMunicipalDate, getMunicipalYear, parseMunicipalIsoDate } from "../lib/municipal-date";
 import { AccessGate, AccessManagement, AccessProvider, useAccess } from "./access";
+import { AgendaModule, AgendaSummary, canAccessCabinetAgenda } from "./agenda";
 import { MedicalBookingCard, MedicalModule } from "./medical";
 import { useMunicipalDate } from "./use-municipal-date";
 
@@ -58,12 +59,6 @@ type TrackingResult = {
     createdAt: string;
   }>;
 };
-
-const events = [
-  { time: "08:30", title: "Reunión con directores", place: "Sala de Gabinete", color: "green" },
-  { time: "10:00", title: "Audiencia — Central 4 Este", place: "Despacho del Alcalde", color: "blue" },
-  { time: "14:30", title: "Inspección avance de obra", place: "Unidad Educativa San Antonio", color: "orange" },
-] as const;
 
 function scrollToSection(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -192,11 +187,14 @@ function HomeContent() {
       && (!access.context.mfaRequired || access.context.assuranceLevel === "aal2"),
     );
     if (!accessReady) return <AccessGate onBack={openCitizenPortal} />;
-    const authorizedView = internalView === "inicio"
+    const primaryAuthorizedView = internalView === "inicio"
       && !access.hasPermission("sigem.routes.read")
       && access.hasPermission("health.appointments.read")
       ? "fichas"
       : internalView;
+    const authorizedView = primaryAuthorizedView === "agenda" && !canAccessCabinetAgenda(access.context)
+      ? "inicio"
+      : primaryAuthorizedView;
     return (
       <InternalPortal
         view={authorizedView}
@@ -363,6 +361,7 @@ function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, se
   const access = useAccess();
   const titles: Record<InternalView, string> = { inicio: "Panel de gestión", hojas: "Hojas de ruta", fichas: "Fichas médicas", accesos: "Usuarios y accesos", contrataciones: "Contrataciones", agenda: "Agenda institucional", transparencia: "Transparencia" };
   const canManageUsers = access.hasPermission("platform.users.manage") || access.hasPermission("sigem.users.manage") || access.hasPermission("health.users.manage");
+  const canAccessAgenda = canAccessCabinetAgenda(access.context);
   const greetingName = access.context?.profile.fullName.trim().split(/\s+/)[0] || "usuario";
   const initials = access.context?.profile.fullName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "US";
   return (
@@ -376,7 +375,7 @@ function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, se
           {access.hasPermission("health.appointments.read") && <SideButton active={view === "fichas"} icon="✚" label="Fichas médicas" onClick={() => setView("fichas")} />}
           {canManageUsers && <SideButton active={view === "accesos"} icon="♙" label="Usuarios y accesos" onClick={() => setView("accesos")} />}
           {access.hasPermission("sigem.routes.read") && <SideButton active={view === "contrataciones"} icon="▣" label="Contrataciones" onClick={() => setView("contrataciones")} />}
-          {access.hasPermission("sigem.routes.read") && <SideButton active={view === "agenda"} icon="□" label="Agenda" onClick={() => setView("agenda")} />}
+          {canAccessAgenda && <SideButton active={view === "agenda"} icon="□" label="Agenda" onClick={() => setView("agenda")} />}
           {access.hasPermission("sigem.reports.read") && <SideButton active={view === "transparencia"} icon="◎" label="Transparencia" onClick={() => setView("transparencia")} />}
         </nav>
         <div className="sidebarFooter"><span className="avatar small">{initials}</span><div><strong>{access.context?.profile.fullName}</strong><span>{access.context?.profile.jobTitle || access.context?.roles[0]?.name}</span></div><button onClick={access.signOut} aria-label="Cerrar sesión">↪</button></div>
@@ -384,7 +383,7 @@ function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, se
 
       <main className="internalMain">
         <header className="internalHeader"><div><span className="sectionKicker">MUNICIPIO DIGITAL</span><h1>{titles[view]}</h1></div><div className="headerActions"><span className="demoPill live" title={routeDataLive ? "Datos municipales conectados" : "Acceso institucional verificado"}><i /> Acceso protegido · 2FA</span><button className="iconButton" aria-label="Notificaciones">●<span className="notificationDot" /></button><button className="portalLink" onClick={openCitizen}>Ver portal ciudadano</button></div></header>
-        {view === "inicio" && <Dashboard setView={setView} openRouteModal={openRouteModal} items={allRoutes} userName={greetingName} today={today} />}
+        {view === "inicio" && <Dashboard setView={setView} openRouteModal={openRouteModal} items={allRoutes} userName={greetingName} today={today} canAccessAgenda={canAccessAgenda} />}
         {view === "hojas" && <RoutesModule openRouteModal={openRouteModal} filter={filter} setFilter={setFilter} search={search} setSearch={setSearch} visibleRoutes={visibleRoutes} allRoutes={allRoutes} loading={routeLoading} />}
         {view === "fichas" && <MedicalModule />}
         {view === "accesos" && <AccessManagement />}
@@ -401,7 +400,7 @@ function SideButton({ active, icon, label, badge, onClick }: { active: boolean; 
   return <button className={active ? "active" : ""} onClick={onClick}><span className="navIcon">{icon}</span><span>{label}</span>{badge && <b>{badge}</b>}</button>;
 }
 
-function Dashboard({ setView, openRouteModal, items, userName, today }: { setView: (view: InternalView) => void; openRouteModal: () => void; items: readonly RouteItem[]; userName: string; today: Date | null }) {
+function Dashboard({ setView, openRouteModal, items, userName, today, canAccessAgenda }: { setView: (view: InternalView) => void; openRouteModal: () => void; items: readonly RouteItem[]; userName: string; today: Date | null; canAccessAgenda: boolean }) {
   const pendientes = items.filter((item) => item.status !== "Finalizado" && item.status !== "Archivado");
   const finalizados = items.length - pendientes.length;
   const urgentes = items.filter((item) => item.priority === "urgente").length;
@@ -414,7 +413,7 @@ function Dashboard({ setView, openRouteModal, items, userName, today }: { setVie
   return <>
     <section className="welcomeRow"><div><p className="dateLine">{dateLabel}</p><h2>Buenos días, {userName}.</h2><p>Tienes <strong>3 asuntos prioritarios</strong> que requieren atención.</p></div><button className="primaryAction" onClick={openRouteModal}><span>＋</span>Nueva hoja de ruta</button></section>
     <section className="statGrid" aria-label="Resumen del trabajo"><StatCard color="blue" label="En mi bandeja" value={String(items.length)} note="Registros disponibles" /><StatCard color="orange" label="Prioridad urgente" value={String(urgentes)} note="Requieren atención" /><StatCard color="green" label="Finalizadas" value={String(finalizados)} note="En la bandeja actual" /><StatCard color="violet" label="Pendientes" value={String(pendientes.length)} note="En seguimiento" /></section>
-    <div className="dashboardGrid"><section className="panel"><PanelHeader eyebrow="HOJA DE RUTA" title="Requieren tu atención" action="Ver toda la bandeja →" onClick={() => setView("hojas")} /><RouteList items={pendientes.slice(0, 3)} /></section><section className="panel agendaPanel"><PanelHeader eyebrow="AGENDA DEL ALCALDE" title={`Hoy, ${shortDateLabel}`} action="↗" onClick={() => setView("agenda")} /><AgendaList /><button className="subtleAction" onClick={() => setView("agenda")}>＋ Agendar audiencia</button></section></div>
+    <div className={`dashboardGrid ${canAccessAgenda ? "" : "single"}`}><section className="panel"><PanelHeader eyebrow="HOJA DE RUTA" title="Requieren tu atención" action="Ver toda la bandeja →" onClick={() => setView("hojas")} /><RouteList items={pendientes.slice(0, 3)} /></section>{canAccessAgenda && <section className="panel agendaPanel"><PanelHeader eyebrow="AGENDA DEL ALCALDE" title={`Hoy, ${shortDateLabel}`} action="↗" onClick={() => setView("agenda")} /><AgendaSummary today={today} onOpen={() => setView("agenda")} /></section>}</div>
     <section className="panel procurementPanel"><PanelHeader eyebrow="CONTRATACIÓN EN CURSO" title="Servicio de impresión — Invitaciones aniversario municipal" action="CM-2026-0038" onClick={() => setView("contrataciones")} /><div className="stepTrack"><ProcessStep complete number="✓" title="Necesidad registrada" note="Unidad de Comunicación" /><ProcessStep complete number="✓" title="Certificación presupuestaria" note="CP-2026-0184 aprobada" /><ProcessStep number="3" title="Inicio de contratación" note="Pendiente de visto bueno" /><ProcessStep number="4" title="Orden de servicio" note="Aún no iniciada" /></div></section>
   </>;
 }
@@ -429,10 +428,6 @@ function PanelHeader({ eyebrow, title, action, onClick }: { eyebrow: string; tit
 
 function RouteList({ items, full = false }: { items: readonly RouteItem[]; full?: boolean }) {
   return <div className={`inboxList ${full ? "full" : ""}`}>{items.length ? items.map((route) => <article className="inboxRow" key={route.code}><span className="docGlyph">▤</span><div className="inboxIdentity"><strong>{route.title}</strong><span>{route.sender} · <b>{route.code}</b></span></div><span className="unitPill">{route.unit}</span><div className="inboxStatus"><span className={route.tone}>{route.status}</span><small>{route.due}</small></div><button aria-label={`Abrir ${route.code}`}>›</button></article>) : <p className="emptyState">No se encontraron hojas de ruta.</p>}</div>;
-}
-
-function AgendaList() {
-  return <div className="agendaList">{events.map((event) => <article className="agendaItem" key={event.time}><time>{event.time}</time><i className={`agendaMark ${event.color}`} /><div><strong>{event.title}</strong><span>{event.place}</span></div></article>)}</div>;
 }
 
 function ProcessStep({ complete = false, number, title, note }: { complete?: boolean; number: string; title: string; note: string }) {
@@ -451,16 +446,6 @@ function ProcurementModule({ openRouteModal }: { openRouteModal: () => void }) {
 
 function ProcurementRow({ code, object, mode, status, amount }: { code: string; object: string; mode: string; status: string; amount: string }) {
   return <div className="tableRow"><strong>{code}</strong><span>{object}</span><span>{mode}</span><i className="status progress">{status}</i><b>{amount}</b></div>;
-}
-
-function AgendaModule({ today }: { today: Date | null }) {
-  const dayOfWeek = today?.getUTCDay() ?? 1;
-  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-  const week = today ? Array.from({ length: 5 }, (_, index) => addMunicipalDays(today, mondayOffset + index)) : [];
-  const selectedDate = today
-    ? capitalizeDateLabel(formatMunicipalDate(today, { weekday: "long", day: "numeric", month: "long" }))
-    : "Fecha actual";
-  return <section className="moduleView"><div className="moduleTitle"><div><h2>Agenda del alcalde</h2><p>Audiencias, reuniones, actos e inspecciones</p></div><button className="primaryAction"><span>＋</span>Agendar evento</button></div><div className="calendarStrip"><button aria-label="Semana anterior">‹</button>{week.map((date) => <div className={date.getUTCDate() === today?.getUTCDate() ? "active" : ""} key={date.toISOString()}><small>{formatMunicipalDate(date, { weekday: "short" }).replace(".", "").toUpperCase()}</small><b>{date.getUTCDate()}</b></div>)}<button aria-label="Semana siguiente">›</button></div><section className="panel dayAgenda"><h3>{selectedDate}</h3>{events.map((event) => <article className="dayEvent" key={event.time}><time>{event.time}</time><i className={event.color} /><div><strong>{event.title}</strong><span>{event.place}</span></div><span>Confirmado</span></article>)}</section></section>;
 }
 
 function TransparencyModule({ today }: { today: Date | null }) {

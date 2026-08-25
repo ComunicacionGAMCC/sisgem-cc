@@ -45,8 +45,12 @@ test("server-renders the Municipio Digital portal", async () => {
 });
 
 test("keeps municipal data lazy, protected, and ChatGPT Sites compatible", async () => {
-  const [page, medical, dbIndex, schema, listApi, trackingApi, medicalApi, hosting, municipalDate, dateHook, routeService] = await Promise.all([
+  const [page, agenda, agendaService, agendaApi, accessServer, medical, dbIndex, schema, listApi, trackingApi, medicalApi, hosting, municipalDate, dateHook, routeService] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/agenda.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../db/agenda.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/agenda/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/access-control.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/medical.tsx", import.meta.url), "utf8"),
     readFile(new URL("../db/index.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
@@ -68,6 +72,21 @@ test("keeps municipal data lazy, protected, and ChatGPT Sites compatible", async
   assert.match(municipalDate, /America\/La_Paz/);
   assert.match(dateHook, /setInterval\(refresh, 60_000\)/);
   assert.match(routeService, /getMunicipalYear\(\)/);
+  assert.match(page, /AgendaSummary/);
+  assert.match(page, /canAccessCabinetAgenda/);
+  assert.match(agenda, /type="date"/);
+  assert.match(agenda, /moveWeek\(-7\)/);
+  assert.match(agenda, /moveWeek\(7\)/);
+  assert.match(agenda, /method: "POST"/);
+  assert.match(agenda, /\/api\/agenda/);
+  assert.match(agendaService, /gte\(agendaActividades\.fecha, from\)/);
+  assert.match(agendaService, /lte\(agendaActividades\.fecha, to\)/);
+  assert.match(agendaApi, /export async function GET/);
+  assert.match(agendaApi, /export async function POST/);
+  assert.match(agendaApi, /authorizeRequest\(request, "sigem\.routes\.read"\)/);
+  assert.match(agendaApi, /requireCabinetAgendaAccess\(context\)/);
+  assert.match(accessServer, /La agenda del alcalde.*Secretar.*de Gabinete/);
+  assert.doesNotMatch(page, /directores|Central 4 Este|avance de obra/);
   assert.doesNotMatch(`${page}\n${medical}`, /(?:jueves, 6 de agosto|Hoy, 4 de agosto|Martes, 4 de agosto|Al 4 de agosto|Fecha estimada: 6 de agosto)/i);
   assert.match(listApi, /export async function GET/);
   assert.match(listApi, /export async function POST/);
@@ -87,6 +106,7 @@ test("keeps municipal data lazy, protected, and ChatGPT Sites compatible", async
     "hojas_de_ruta",
     "derivaciones",
     "eventos_seguimiento",
+    "agenda_actividades",
     "auditoria",
   ]) {
     assert.match(schema, new RegExp(`"${table}"`));

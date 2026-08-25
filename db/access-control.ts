@@ -98,3 +98,22 @@ export function scopedMunicipalUnitIds(context: AccessContext) {
     .filter((role) => role.scopeType === "municipal_unit" && role.scopeId)
     .map((role) => role.scopeId as string);
 }
+
+export function hasCabinetAgendaAccess(context: AccessContext) {
+  if (
+    context.permissions.includes("platform.users.manage")
+    || context.permissions.includes("sigem.users.manage")
+  ) return true;
+
+  return context.roles.some((role) => (
+    role.module === "sigem"
+    && role.scopeType === "municipal_unit"
+    && /gabinete/i.test(role.scopeLabel ?? "")
+  ));
+}
+
+export function requireCabinetAgendaAccess(context: AccessContext) {
+  if (!hasCabinetAgendaAccess(context)) {
+    throw new AccessDeniedError("La agenda del alcalde está reservada para Secretaría de Gabinete.");
+  }
+}

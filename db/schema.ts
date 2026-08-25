@@ -1,16 +1,20 @@
 import {
   boolean,
+  check,
+  date,
   index,
   integer,
   jsonb,
   pgEnum,
   pgTable,
   text,
+  time,
   timestamp,
   uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 const auditColumns = {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -182,6 +186,35 @@ export const secuenciasCodigo = pgTable("secuencias_codigo", {
   ultimo: integer("ultimo").default(0).notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+export const agendaActividades = pgTable(
+  "agenda_actividades",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    fecha: date("fecha").notNull(),
+    horaInicio: time("hora_inicio", { withTimezone: false }).notNull(),
+    horaFin: time("hora_fin", { withTimezone: false }),
+    titulo: varchar("titulo", { length: 220 }).notNull(),
+    lugar: varchar("lugar", { length: 220 }),
+    descripcion: text("descripcion"),
+    estado: varchar("estado", { length: 30 }).default("confirmada").notNull(),
+    creadoPorUsuarioId: uuid("creado_por_usuario_id"),
+    creadoPorNombre: varchar("creado_por_nombre", { length: 220 }),
+    ...auditColumns,
+  },
+  (table) => [
+    index("agenda_actividades_fecha_hora_idx").on(table.fecha, table.horaInicio),
+    index("agenda_actividades_estado_idx").on(table.estado),
+    check(
+      "agenda_actividades_estado_check",
+      sql`${table.estado} in ('confirmada', 'tentativa')`,
+    ),
+    check(
+      "agenda_actividades_horas_check",
+      sql`${table.horaFin} is null or ${table.horaFin} > ${table.horaInicio}`,
+    ),
+  ],
+);
 
 export const auditoria = pgTable(
   "auditoria",
