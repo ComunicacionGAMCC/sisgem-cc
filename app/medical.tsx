@@ -64,8 +64,12 @@ function formatDate(date: string, compact = false) {
     : { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 }
 
-async function loadMedicalData(signal?: AbortSignal) {
-  const response = await fetch("/api/fichas-medicas", { cache: "no-store", signal });
+async function loadMedicalData(signal?: AbortSignal, accessToken?: string) {
+  const response = await fetch(accessToken ? "/api/fichas-medicas" : "/api/fichas-medicas/disponibilidad", {
+    cache: "no-store",
+    signal,
+    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+  });
   const data = (await response.json()) as MedicalData & { error?: string };
   if (!response.ok) throw new Error(data.error || "No se pudo cargar la agenda médica.");
   return data;
@@ -230,8 +234,10 @@ export function MedicalModule() {
   const [specialty, setSpecialty] = useState("todas");
 
   useEffect(() => {
+    const accessToken = access.session?.access_token;
+    if (!accessToken) return;
     const controller = new AbortController();
-    loadMedicalData(controller.signal)
+    loadMedicalData(controller.signal, accessToken)
       .then(setData)
       .catch((reason) => {
         if (reason instanceof DOMException && reason.name === "AbortError") return;
@@ -239,7 +245,7 @@ export function MedicalModule() {
       })
       .finally(() => setLoading(false));
     return () => controller.abort();
-  }, []);
+  }, [access.session?.access_token]);
 
   const visible = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -250,6 +256,9 @@ export function MedicalModule() {
     }) ?? [];
   }, [data, query, specialty]);
 
+  if (!access.session?.access_token) {
+    return <section className="medicalModuleState error">Debes iniciar sesión para consultar el panel médico.</section>;
+  }
   if (loading) return <section className="medicalModuleState">Cargando agenda del hospital…</section>;
   if (error || !data) return <section className="medicalModuleState error">{error || "La agenda no está disponible."}</section>;
 

@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { crearFichaMedica, obtenerPanelFichasMedicas } from "../../../db/fichas-medicas";
+import { AccessDeniedError, authorizeRequest } from "../../../db/access-control";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -8,11 +9,15 @@ function texto(value: unknown, maximo: number) {
   return typeof value === "string" ? value.trim().slice(0, maximo) : "";
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    await authorizeRequest(request, "health.appointments.read");
     const data = await obtenerPanelFichasMedicas();
     return NextResponse.json(data, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
+    if (error instanceof AccessDeniedError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error("No se pudo obtener la agenda médica", error);
     return NextResponse.json(
       { error: "La agenda médica no está disponible temporalmente." },

@@ -102,6 +102,16 @@ export async function obtenerPanelFichasMedicas() {
   };
 }
 
+export async function obtenerDisponibilidadPublica() {
+  const panel = await obtenerPanelFichasMedicas();
+  return {
+    hospital: panel.hospital,
+    specialties: panel.specialties,
+    availability: panel.availability,
+    privacy: "La consulta pública muestra únicamente especialidades y cupos disponibles.",
+  };
+}
+
 export async function crearFichaMedica(input: NuevaFichaMedica) {
   const { data, error } = await getHealthClient().rpc("health_create_appointment", {
     p_request_id: input.solicitudId,
