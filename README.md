@@ -22,8 +22,10 @@ del Hospital Municipal.
 - Todos los perfiles administrativos y clínicos requieren segundo factor. Los
   permisos se validan en el servidor, tienen ámbito y dejan auditoría.
 
-Las cuentas se crean por invitación. No se guardan ni se comparten contraseñas
-provisionales en el repositorio.
+Las cuentas del personal se crean directamente desde el panel de administración.
+El administrador define la contraseña inicial, confirma la cuenta y asigna el rol
+y ámbito autorizados. Las contraseñas nunca se guardan en el repositorio ni se
+devuelven desde la API.
 
 ## Quick Start
 

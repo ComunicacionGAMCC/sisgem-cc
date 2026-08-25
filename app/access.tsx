@@ -302,7 +302,7 @@ export function AccessGate({ onBack }: { onBack: () => void }) {
           <div className="accessBrand"><img src="/escudo-gamcc.png" alt="GAMCC" /><span><b>Acceso institucional</b><small>SIGEM · Hospital Municipal</small></span></div>
           <span className="accessKicker">ÁREA PROTEGIDA</span>
           <h1>Bienvenido al sistema municipal</h1>
-          <p>Ingresa con las credenciales enviadas a tu correo. Tus opciones se habilitarán según tu cargo y área.</p>
+          <p>Ingresa con las credenciales entregadas por tu administrador. Tus opciones se habilitarán según tu cargo y área.</p>
           <form className="accessForm" onSubmit={submitLogin}>
             <label>Correo institucional<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="username" required /></label>
             <label>Contraseña<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required minLength={8} /></label>
@@ -418,17 +418,23 @@ export function AccessManagement() {
   const selectedRole = roles.find((role) => role.code === roleCode);
   const requiresUnit = selectedRole?.module === "sigem" && !["sigem_admin", "super_admin"].includes(roleCode);
 
-  async function invite(event: FormEvent<HTMLFormElement>) {
+  async function createManagedUser(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!access.session) return;
     const form = new FormData(event.currentTarget);
     const unit = units.find((item) => item.id === unitId);
+    const password = String(form.get("password") ?? "");
+    const passwordConfirmation = String(form.get("passwordConfirmation") ?? "");
     if (requiresUnit && !unit) {
       setMessage("Selecciona el área municipal correspondiente.");
       return;
     }
+    if (password !== passwordConfirmation) {
+      setMessage("Las contraseñas no coinciden.");
+      return;
+    }
     setMessage("");
-    const response = await fetch("/api/access/invitations", {
+    const response = await fetch("/api/access/users", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -438,6 +444,7 @@ export function AccessManagement() {
         email: form.get("email"),
         fullName: form.get("fullName"),
         jobTitle: form.get("jobTitle"),
+        password,
         roleCode,
         scopeType: requiresUnit ? "municipal_unit" : "global",
         scopeId: requiresUnit ? unit?.id : null,
@@ -449,7 +456,7 @@ export function AccessManagement() {
       setMessage(result.error || "No se pudo crear el acceso.");
       return;
     }
-    setMessage(`Invitación enviada a ${result.email}.`);
+    setMessage(`Usuario ${result.email} creado y habilitado. Entrega sus credenciales de forma privada.`);
     event.currentTarget.reset();
     setUnitId("");
     setLoading(true);
@@ -464,15 +471,16 @@ export function AccessManagement() {
       </section>
       <div className="accessModuleGrid">
         <section className="panel accessInvitePanel">
-          <header><span>NUEVO ACCESO</span><h3>Invitar a un funcionario</h3><p>La persona recibirá un enlace para crear su contraseña.</p></header>
-          <form onSubmit={invite}>
+          <header><span>NUEVO ACCESO</span><h3>Crear usuario</h3><p>Define sus credenciales y asigna el rol y área que le corresponden.</p></header>
+          <form onSubmit={createManagedUser}>
             <label>Nombre completo<input name="fullName" required minLength={5} /></label>
             <div className="accessFormGrid"><label>Correo institucional<input name="email" type="email" required /></label><label>Cargo<input name="jobTitle" required /></label></div>
+            <div className="accessFormGrid"><label>Contraseña inicial<input name="password" type="password" autoComplete="new-password" required minLength={12} maxLength={128} /></label><label>Confirmar contraseña<input name="passwordConfirmation" type="password" autoComplete="new-password" required minLength={12} maxLength={128} /></label></div>
             <label>Tipo de acceso<select value={roleCode} onChange={(event) => { setRoleCode(event.target.value); setUnitId(""); }} required>{roles.map((role) => <option key={role.code} value={role.code}>{role.name}</option>)}</select></label>
             {selectedRole && <p className="roleDescription">{selectedRole.description}{selectedRole.requiresMfa ? " · Requiere verificación en dos pasos." : ""}</p>}
             {requiresUnit && <label>Área o unidad municipal<select value={unitId} onChange={(event) => setUnitId(event.target.value)} required><option value="">Seleccionar área…</option>{units.map((unit) => <option key={unit.id} value={unit.id}>{unit.code} · {unit.name}</option>)}</select></label>}
             {message && <p className="accessMessage" role="status">{message}</p>}
-            <button className="accessPrimary" disabled={loading || !roleCode}>Enviar invitación segura</button>
+            <button className="accessPrimary" disabled={loading || !roleCode}>Crear usuario y asignar acceso</button>
           </form>
         </section>
         <section className="panel accessUsersPanel">

@@ -8,7 +8,7 @@ export const HEALTH_SUPABASE_URL =
 
 export const HEALTH_SUPABASE_PUBLISHABLE_KEY =
   process.env.NEXT_PUBLIC_HEALTH_SUPABASE_PUBLISHABLE_KEY ??
-  "sb_publishable_ltaNA7nnVozoSCOcZIjg";
+  "sb_publishable_weZEzBf2Uie-hpZWJXGA2A_wel4u7bL";
 
 export type AccessRole = {
   code: string;

@@ -38,6 +38,7 @@ test("server-renders the Municipio Digital portal", async () => {
   assert.match(html, /Hospital Municipal de Cuatro Cañadas/i);
   assert.match(html, /Solicitar ficha/);
   assert.match(html, /Denuncia anónima y protegida/);
+  assert.match(html, /Acceder<\/button>/);
   assert.match(html, /Secretaría General o en la unidad municipal competente/);
   assert.doesNotMatch(html, /Iniciar un trámite/);
   assert.doesNotMatch(html, /DATABASE_URL|postgresql:\/\//i);
@@ -89,10 +90,10 @@ test("keeps municipal data lazy, protected, and ChatGPT Sites compatible", async
 });
 
 test("enforces scoped institutional access with MFA and auditable roles", async () => {
-  const [accessUi, accessServer, inviteApi, accessMigration, bootstrapMigration, bootstrapScript] = await Promise.all([
+  const [accessUi, accessServer, userApi, accessMigration, bootstrapMigration, bootstrapScript] = await Promise.all([
     readFile(new URL("../app/access.tsx", import.meta.url), "utf8"),
     readFile(new URL("../db/access-control.ts", import.meta.url), "utf8"),
-    readFile(new URL("../app/api/access/invitations/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/access/users/route.ts", import.meta.url), "utf8"),
     readFile(
       new URL("../supabase/migrations/20260824201726_access_control.sql", import.meta.url),
       "utf8",
@@ -118,7 +119,10 @@ test("enforces scoped institutional access with MFA and auditable roles", async 
   assert.match(accessUi, /mfa\.enroll/);
   assert.match(accessUi, /mfa\.challenge/);
   assert.match(accessServer, /authorizeRequest/);
-  assert.match(inviteApi, /inviteUserByEmail/);
+  assert.match(userApi, /auth\.admin\.createUser/);
+  assert.match(userApi, /email_confirm: true/);
+  assert.match(userApi, /auth\.admin\.deleteUser/);
+  assert.doesNotMatch(userApi, /inviteUserByEmail/);
   assert.match(accessMigration, /access_bootstrap_super_admin/);
   assert.match(accessMigration, /force row level security/);
   assert.match(accessMigration, /audit_events/);
@@ -127,7 +131,8 @@ test("enforces scoped institutional access with MFA and auditable roles", async 
   assert.match(bootstrapMigration, /to service_role/);
   assert.match(bootstrapScript, /inviteUserByEmail/);
   assert.match(bootstrapScript, /\?access=1/);
-  assert.doesNotMatch(`${accessUi}\n${accessServer}\n${inviteApi}`, /service_role|HEALTH_SUPABASE_SECRET_KEY/);
+  assert.match(accessUi, /Crear usuario y asignar acceso/);
+  assert.doesNotMatch(`${accessUi}\n${accessServer}\n${userApi}`, /service_role|HEALTH_SUPABASE_SECRET_KEY/);
 });
 
 test("keeps the health database private and server-only", async () => {

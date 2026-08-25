@@ -231,7 +231,7 @@ function HomeContent() {
           <a href="#seguimiento">Seguimiento</a>
           <a href="#denuncia">Denuncia anónima</a>
         </nav>
-        <button className="employeeAccess" onClick={() => openInternal()}><span>◎</span> Acceso funcionarios</button>
+        <button className="employeeAccess" onClick={() => openInternal()}><span>◎</span> Acceder</button>
       </header>
 
       <main>
