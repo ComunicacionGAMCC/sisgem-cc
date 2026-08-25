@@ -59,6 +59,9 @@ test("keeps municipal data lazy, protected, and ChatGPT Sites compatible", async
   assert.match(page, /fetch\("\/api\/hojas-ruta"/);
   assert.match(page, /\/api\/seguimiento\//);
   assert.match(page, /Acceso protegido · 2FA/);
+  assert.match(page, /profile\.fullName\.trim\(\)\.split/);
+  assert.match(page, /Buenos días, \{userName\}/);
+  assert.doesNotMatch(page, /Buenos días, Saúl/);
   assert.match(listApi, /export async function GET/);
   assert.match(listApi, /export async function POST/);
   assert.match(trackingApi, /obtenerSeguimiento/);

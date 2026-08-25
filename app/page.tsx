@@ -352,6 +352,7 @@ function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, se
   const access = useAccess();
   const titles: Record<InternalView, string> = { inicio: "Panel de gestión", hojas: "Hojas de ruta", fichas: "Fichas médicas", accesos: "Usuarios y accesos", contrataciones: "Contrataciones", agenda: "Agenda institucional", transparencia: "Transparencia" };
   const canManageUsers = access.hasPermission("platform.users.manage") || access.hasPermission("sigem.users.manage") || access.hasPermission("health.users.manage");
+  const greetingName = access.context?.profile.fullName.trim().split(/\s+/)[0] || "usuario";
   const initials = access.context?.profile.fullName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "US";
   return (
     <div className="internalShell">
@@ -372,7 +373,7 @@ function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, se
 
       <main className="internalMain">
         <header className="internalHeader"><div><span className="sectionKicker">MUNICIPIO DIGITAL</span><h1>{titles[view]}</h1></div><div className="headerActions"><span className="demoPill live" title={routeDataLive ? "Datos municipales conectados" : "Acceso institucional verificado"}><i /> Acceso protegido · 2FA</span><button className="iconButton" aria-label="Notificaciones">●<span className="notificationDot" /></button><button className="portalLink" onClick={openCitizen}>Ver portal ciudadano</button></div></header>
-        {view === "inicio" && <Dashboard setView={setView} openRouteModal={openRouteModal} items={allRoutes} />}
+        {view === "inicio" && <Dashboard setView={setView} openRouteModal={openRouteModal} items={allRoutes} userName={greetingName} />}
         {view === "hojas" && <RoutesModule openRouteModal={openRouteModal} filter={filter} setFilter={setFilter} search={search} setSearch={setSearch} visibleRoutes={visibleRoutes} allRoutes={allRoutes} loading={routeLoading} />}
         {view === "fichas" && <MedicalModule />}
         {view === "accesos" && <AccessManagement />}
@@ -389,12 +390,12 @@ function SideButton({ active, icon, label, badge, onClick }: { active: boolean; 
   return <button className={active ? "active" : ""} onClick={onClick}><span className="navIcon">{icon}</span><span>{label}</span>{badge && <b>{badge}</b>}</button>;
 }
 
-function Dashboard({ setView, openRouteModal, items }: { setView: (view: InternalView) => void; openRouteModal: () => void; items: readonly RouteItem[] }) {
+function Dashboard({ setView, openRouteModal, items, userName }: { setView: (view: InternalView) => void; openRouteModal: () => void; items: readonly RouteItem[]; userName: string }) {
   const pendientes = items.filter((item) => item.status !== "Finalizado" && item.status !== "Archivado");
   const finalizados = items.length - pendientes.length;
   const urgentes = items.filter((item) => item.priority === "urgente").length;
   return <>
-    <section className="welcomeRow"><div><p className="dateLine">jueves, 6 de agosto</p><h2>Buenos días, Saúl.</h2><p>Tienes <strong>3 asuntos prioritarios</strong> que requieren atención.</p></div><button className="primaryAction" onClick={openRouteModal}><span>＋</span>Nueva hoja de ruta</button></section>
+    <section className="welcomeRow"><div><p className="dateLine">jueves, 6 de agosto</p><h2>Buenos días, {userName}.</h2><p>Tienes <strong>3 asuntos prioritarios</strong> que requieren atención.</p></div><button className="primaryAction" onClick={openRouteModal}><span>＋</span>Nueva hoja de ruta</button></section>
     <section className="statGrid" aria-label="Resumen del trabajo"><StatCard color="blue" label="En mi bandeja" value={String(items.length)} note="Registros disponibles" /><StatCard color="orange" label="Prioridad urgente" value={String(urgentes)} note="Requieren atención" /><StatCard color="green" label="Finalizadas" value={String(finalizados)} note="En la bandeja actual" /><StatCard color="violet" label="Pendientes" value={String(pendientes.length)} note="En seguimiento" /></section>
     <div className="dashboardGrid"><section className="panel"><PanelHeader eyebrow="HOJA DE RUTA" title="Requieren tu atención" action="Ver toda la bandeja →" onClick={() => setView("hojas")} /><RouteList items={pendientes.slice(0, 3)} /></section><section className="panel agendaPanel"><PanelHeader eyebrow="AGENDA DEL ALCALDE" title="Hoy, 4 de agosto" action="↗" onClick={() => setView("agenda")} /><AgendaList /><button className="subtleAction" onClick={() => setView("agenda")}>＋ Agendar audiencia</button></section></div>
     <section className="panel procurementPanel"><PanelHeader eyebrow="CONTRATACIÓN EN CURSO" title="Servicio de impresión — Invitaciones aniversario municipal" action="CM-2026-0038" onClick={() => setView("contrataciones")} /><div className="stepTrack"><ProcessStep complete number="✓" title="Necesidad registrada" note="Unidad de Comunicación" /><ProcessStep complete number="✓" title="Certificación presupuestaria" note="CP-2026-0184 aprobada" /><ProcessStep number="3" title="Inicio de contratación" note="Pendiente de visto bueno" /><ProcessStep number="4" title="Orden de servicio" note="Aún no iniciada" /></div></section>
