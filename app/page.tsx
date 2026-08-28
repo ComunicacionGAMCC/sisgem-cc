@@ -1,11 +1,12 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { addMunicipalDays, capitalizeDateLabel, formatMunicipalDate, getMunicipalYear, parseMunicipalIsoDate } from "../lib/municipal-date";
+import { addMunicipalDays, capitalizeDateLabel, formatMunicipalDate, getMunicipalIsoDate, getMunicipalYear, parseMunicipalIsoDate } from "../lib/municipal-date";
 import { AccessGate, AccessManagement, AccessProvider, useAccess } from "./access";
 import { AgendaModule, AgendaSummary, canAccessCabinetAgenda } from "./agenda";
 import { MedicalBookingCard, MedicalModule } from "./medical";
 import { HumanResourcesModule } from "./recursos-humanos";
+import { ProcurementModule } from "./contrataciones";
 import { RouteCreateModal, RouteWorkflowPanel } from "./hojas-ruta";
 import { useMunicipalDate } from "./use-municipal-date";
 
@@ -346,6 +347,26 @@ function HowStep({ number, title, text }: { number: string; title: string; text:
   return <div><b>{number}</b><h3>{title}</h3><p>{text}</p></div>;
 }
 
+type RouteAlert = { route: RouteItem; label: string; level: "overdue" | "today" | "urgent" };
+
+function getRouteAlerts(items: readonly RouteItem[], today: Date | null): RouteAlert[] {
+  const todayKey = today ? today.toISOString().slice(0, 10) : getMunicipalIsoDate();
+  return items
+    .filter((item) => item.status !== "Finalizado" && item.status !== "Archivado")
+    .map((route): RouteAlert | null => {
+      const dueKey = route.dueAt ? getMunicipalIsoDate(new Date(route.dueAt)) : null;
+      if (dueKey && dueKey < todayKey) return { route, label: "Plazo vencido", level: "overdue" };
+      if (dueKey === todayKey) return { route, label: "Vence hoy", level: "today" };
+      if (route.priority === "urgente") return { route, label: "Prioridad urgente", level: "urgent" };
+      return null;
+    })
+    .filter((alert): alert is RouteAlert => alert !== null)
+    .sort((a, b) => {
+      const rank = { overdue: 0, today: 1, urgent: 2 };
+      return rank[a.level] - rank[b.level];
+    });
+}
+
 function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, setFilter, search, setSearch, visibleRoutes, allRoutes, routeLoading, routeDataLive, routeModal, setRouteModal, createdCode, routeCreated, routeUnits, refreshRoutes, today }: {
   view: InternalView;
   setView: (view: InternalView) => void;
@@ -368,12 +389,21 @@ function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, se
   today: Date | null;
 }) {
   const access = useAccess();
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const titles: Record<InternalView, string> = { inicio: "Panel de gestión", hojas: "Hojas de ruta", fichas: "Fichas médicas", accesos: "Usuarios y accesos", rrhh: "Recursos Humanos", contrataciones: "Contrataciones", agenda: "Agenda institucional", transparencia: "Transparencia" };
   const canManageUsers = access.hasPermission("platform.users.manage") || access.hasPermission("sigem.users.manage") || access.hasPermission("health.users.manage");
   const canAccessAgenda = canAccessCabinetAgenda(access.context);
   const pressOnly = access.context?.roles.some((role) => role.code === "sigem_prensa") ?? false;
   const greetingName = access.context?.profile.fullName.trim().split(/\s+/)[0] || "usuario";
   const initials = access.context?.profile.fullName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "US";
+  const routeAlerts = getRouteAlerts(allRoutes, today);
+
+  function openRoute(route: RouteItem) {
+    setSearch(route.code);
+    setFilter("todos");
+    setView("hojas");
+    setNotificationsOpen(false);
+  }
   return (
     <div className="internalShell">
       <aside className="sidebar">
@@ -393,13 +423,13 @@ function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, se
       </aside>
 
       <main className="internalMain">
-        <header className="internalHeader"><div><span className="sectionKicker">MUNICIPIO DIGITAL</span><h1>{titles[view]}</h1></div><div className="headerActions"><span className="demoPill live" title={routeDataLive ? "Datos municipales conectados" : "Acceso institucional verificado"}><i /> Acceso protegido · 2FA</span><button className="iconButton" aria-label="Notificaciones">●<span className="notificationDot" /></button><button className="portalLink" onClick={openCitizen}>Ver portal ciudadano</button></div></header>
-        {view === "inicio" && <Dashboard setView={setView} openRouteModal={openRouteModal} items={allRoutes} userName={greetingName} today={today} canAccessAgenda={canAccessAgenda} />}
+        <header className="internalHeader"><div><span className="sectionKicker">MUNICIPIO DIGITAL</span><h1>{titles[view]}</h1></div><div className="headerActions"><span className="demoPill live" title={routeDataLive ? "Datos municipales conectados" : "Acceso institucional verificado"}><i /> Acceso protegido · 2FA</span><div className="notificationMenu"><button className="iconButton" aria-label={`Notificaciones: ${routeAlerts.length} pendientes`} aria-expanded={notificationsOpen} onClick={() => setNotificationsOpen((open) => !open)}>●{routeAlerts.length > 0 && <span className="notificationCount">{routeAlerts.length > 9 ? "9+" : routeAlerts.length}</span>}</button>{notificationsOpen && <section className="notificationPanel" aria-label="Alertas de hojas de ruta"><header><div><span>ALERTAS</span><strong>Requieren atención</strong></div><button onClick={() => setNotificationsOpen(false)} aria-label="Cerrar alertas">×</button></header><div className="notificationList">{routeAlerts.length ? routeAlerts.slice(0, 6).map((alert) => <button key={alert.route.code} onClick={() => openRoute(alert.route)}><i className={alert.level} /><span><strong>{alert.label}</strong><small>{alert.route.code} · {alert.route.title}</small></span><b>›</b></button>) : <p>No tienes alertas pendientes.</p>}</div>{routeAlerts.length > 0 && <button className="notificationFooter" onClick={() => { setView("hojas"); setNotificationsOpen(false); }}>Ver toda la bandeja →</button>}</section>}</div><button className="portalLink" onClick={openCitizen}>Ver portal ciudadano</button></div></header>
+        {view === "inicio" && <Dashboard setView={setView} openRouteModal={openRouteModal} items={allRoutes} userName={greetingName} today={today} canAccessAgenda={canAccessAgenda} openRoute={openRoute} />}
         {view === "hojas" && <RoutesModule openRouteModal={openRouteModal} filter={filter} setFilter={setFilter} search={search} setSearch={setSearch} visibleRoutes={visibleRoutes} allRoutes={allRoutes} loading={routeLoading} refresh={refreshRoutes} />}
         {view === "fichas" && <MedicalModule />}
         {view === "accesos" && <AccessManagement />}
         {view === "rrhh" && <HumanResourcesModule />}
-        {view === "contrataciones" && <ProcurementModule openRouteModal={openRouteModal} />}
+        {view === "contrataciones" && <ProcurementModule />}
         {view === "agenda" && <AgendaModule today={today} />}
         {view === "transparencia" && <TransparencyModule today={today} />}
       </main>
@@ -412,10 +442,11 @@ function SideButton({ active, icon, label, badge, onClick }: { active: boolean; 
   return <button className={active ? "active" : ""} onClick={onClick}><span className="navIcon">{icon}</span><span>{label}</span>{badge && <b>{badge}</b>}</button>;
 }
 
-function Dashboard({ setView, openRouteModal, items, userName, today, canAccessAgenda }: { setView: (view: InternalView) => void; openRouteModal: () => void; items: readonly RouteItem[]; userName: string; today: Date | null; canAccessAgenda: boolean }) {
+function Dashboard({ setView, openRouteModal, items, userName, today, canAccessAgenda, openRoute }: { setView: (view: InternalView) => void; openRouteModal: () => void; items: readonly RouteItem[]; userName: string; today: Date | null; canAccessAgenda: boolean; openRoute: (route: RouteItem) => void }) {
   const pendientes = items.filter((item) => item.status !== "Finalizado" && item.status !== "Archivado");
   const finalizados = items.length - pendientes.length;
-  const urgentes = items.filter((item) => item.priority === "urgente").length;
+  const alertas = getRouteAlerts(items, today);
+  const urgentes = pendientes.filter((item) => item.priority === "urgente").length;
   const dateLabel = today
     ? capitalizeDateLabel(formatMunicipalDate(today, { weekday: "long", day: "numeric", month: "long" }))
     : "Fecha actual";
@@ -423,10 +454,9 @@ function Dashboard({ setView, openRouteModal, items, userName, today, canAccessA
     ? formatMunicipalDate(today, { day: "numeric", month: "long" })
     : "fecha actual";
   return <>
-    <section className="welcomeRow"><div><p className="dateLine">{dateLabel}</p><h2>Buenos días, {userName}.</h2><p>Tienes <strong>3 asuntos prioritarios</strong> que requieren atención.</p></div><button className="primaryAction" onClick={openRouteModal}><span>＋</span>Nueva hoja de ruta</button></section>
+    <section className="welcomeRow"><div><p className="dateLine">{dateLabel}</p><h2>Buenos días, {userName}.</h2><p>{alertas.length ? <>Tienes <strong>{alertas.length} {alertas.length === 1 ? "asunto prioritario" : "asuntos prioritarios"}</strong> que requieren atención.</> : <>No tienes asuntos prioritarios pendientes.</>}</p></div><button className="primaryAction" onClick={openRouteModal}><span>＋</span>Nueva hoja de ruta</button></section>
     <section className="statGrid" aria-label="Resumen del trabajo"><StatCard color="blue" label="En mi bandeja" value={String(items.length)} note="Registros disponibles" /><StatCard color="orange" label="Prioridad urgente" value={String(urgentes)} note="Requieren atención" /><StatCard color="green" label="Finalizadas" value={String(finalizados)} note="En la bandeja actual" /><StatCard color="violet" label="Pendientes" value={String(pendientes.length)} note="En seguimiento" /></section>
-    <div className={`dashboardGrid ${canAccessAgenda ? "" : "single"}`}><section className="panel"><PanelHeader eyebrow="HOJA DE RUTA" title="Requieren tu atención" action="Ver toda la bandeja →" onClick={() => setView("hojas")} /><RouteList items={pendientes.slice(0, 3)} /></section>{canAccessAgenda && <section className="panel agendaPanel"><PanelHeader eyebrow="AGENDA DEL ALCALDE" title={`Hoy, ${shortDateLabel}`} action="↗" onClick={() => setView("agenda")} /><AgendaSummary today={today} onOpen={() => setView("agenda")} /></section>}</div>
-    <section className="panel procurementPanel"><PanelHeader eyebrow="CONTRATACIÓN EN CURSO" title="Servicio de impresión — Invitaciones aniversario municipal" action="CM-2026-0038" onClick={() => setView("contrataciones")} /><div className="stepTrack"><ProcessStep complete number="✓" title="Necesidad registrada" note="Unidad de Comunicación" /><ProcessStep complete number="✓" title="Certificación presupuestaria" note="CP-2026-0184 aprobada" /><ProcessStep number="3" title="Inicio de contratación" note="Pendiente de visto bueno" /><ProcessStep number="4" title="Orden de servicio" note="Aún no iniciada" /></div></section>
+    <div className={`dashboardGrid ${canAccessAgenda ? "" : "single"}`}><section className="panel"><PanelHeader eyebrow="HOJA DE RUTA" title="Requieren tu atención" action="Ver toda la bandeja →" onClick={() => setView("hojas")} /><RouteList items={alertas.map((alert) => alert.route).slice(0, 3)} onOpen={openRoute} /></section>{canAccessAgenda && <section className="panel agendaPanel"><PanelHeader eyebrow="AGENDA DEL ALCALDE" title={`Hoy, ${shortDateLabel}`} action="↗" onClick={() => setView("agenda")} /><AgendaSummary today={today} onOpen={() => setView("agenda")} /></section>}</div>
   </>;
 }
 
@@ -438,24 +468,12 @@ function PanelHeader({ eyebrow, title, action, onClick }: { eyebrow: string; tit
   return <header className="panelHeader"><div><span className="panelEyebrow">{eyebrow}</span><h3>{title}</h3></div><button onClick={onClick}>{action}</button></header>;
 }
 
-function RouteList({ items, full = false }: { items: readonly RouteItem[]; full?: boolean }) {
-  return <div className={`inboxList ${full ? "full" : ""}`}>{items.length ? items.map((route) => <article className="inboxRow" key={route.code}><span className="docGlyph">▤</span><div className="inboxIdentity"><strong>{route.title}</strong><span>{route.sender} · <b>{route.code}</b></span></div><span className="unitPill">{route.unit}</span><div className="inboxStatus"><span className={route.tone}>{route.status}</span><small>{route.due}</small></div><button aria-label={`Abrir ${route.code}`}>›</button></article>) : <p className="emptyState">No se encontraron hojas de ruta.</p>}</div>;
-}
-
-function ProcessStep({ complete = false, number, title, note }: { complete?: boolean; number: string; title: string; note: string }) {
-  return <div className={`processStep ${complete ? "complete" : ""}`}><div className="stepTop"><span>{number}</span><i /></div><strong>{title}</strong><small>{note}</small></div>;
+function RouteList({ items, full = false, onOpen }: { items: readonly RouteItem[]; full?: boolean; onOpen?: (route: RouteItem) => void }) {
+  return <div className={`inboxList ${full ? "full" : ""}`}>{items.length ? items.map((route) => <article className="inboxRow" key={route.code}><span className="docGlyph">▤</span><div className="inboxIdentity"><strong>{route.title}</strong><span>{route.sender} · <b>{route.code}</b></span></div><span className="unitPill">{route.unit}</span><div className="inboxStatus"><span className={route.tone}>{route.status}</span><small>{route.due}</small></div><button aria-label={`Abrir ${route.code}`} onClick={() => onOpen?.(route)}>›</button></article>) : <p className="emptyState">No hay hojas de ruta que requieran atención.</p>}</div>;
 }
 
 function RoutesModule({ openRouteModal, filter, setFilter, search, setSearch, visibleRoutes, allRoutes, loading, refresh }: { openRouteModal: () => void; filter: "todos" | "pendientes" | "finalizados"; setFilter: (value: "todos" | "pendientes" | "finalizados") => void; search: string; setSearch: (value: string) => void; visibleRoutes: readonly RouteItem[]; allRoutes: readonly RouteItem[]; loading: boolean; refresh: () => void }) {
   return <RouteWorkflowPanel openRouteModal={openRouteModal} filter={filter} setFilter={setFilter} search={search} setSearch={setSearch} visibleRoutes={visibleRoutes} allRoutes={allRoutes} loading={loading} refresh={refresh} />;
-}
-
-function ProcurementModule({ openRouteModal }: { openRouteModal: () => void }) {
-  return <section className="moduleView"><div className="moduleTitle"><div><h2>Procesos de contratación</h2><p>Desde la certificación presupuestaria hasta el pago</p></div><button className="primaryAction" onClick={openRouteModal}><span>＋</span>Nueva solicitud</button></div><div className="statGrid compactStats"><StatCard color="orange" label="En preparación" value="6" note="2 con observaciones" /><StatCard color="blue" label="En contratación" value="4" note="1 requiere aprobación" /><StatCard color="violet" label="Pendientes de pago" value="3" note="Bs 18.450 en total" /><StatCard color="green" label="Concluidos" value="19" note="Gestión 2026" /></div><section className="panel tablePanel"><div className="tableHeader"><span>Proceso</span><span>Objeto</span><span>Modalidad</span><span>Estado</span><span>Monto</span></div><ProcurementRow code="CM-2026-0038" object="Impresión de invitaciones" mode="Contratación Menor" status="Visto bueno" amount="Bs 4.850" /><ProcurementRow code="CM-2026-0034" object="Servicio de producción audiovisual" mode="Contratación Menor" status="Cotización" amount="Bs 12.000" /><ProcurementRow code="ANPE-2026-0007" object="Mantenimiento de alumbrado público" mode="ANPE" status="Adjudicado" amount="Bs 184.500" /></section></section>;
-}
-
-function ProcurementRow({ code, object, mode, status, amount }: { code: string; object: string; mode: string; status: string; amount: string }) {
-  return <div className="tableRow"><strong>{code}</strong><span>{object}</span><span>{mode}</span><i className="status progress">{status}</i><b>{amount}</b></div>;
 }
 
 function TransparencyModule({ today }: { today: Date | null }) {

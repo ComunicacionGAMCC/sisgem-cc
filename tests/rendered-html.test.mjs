@@ -139,6 +139,9 @@ test("keeps municipal data lazy, protected, and ChatGPT Sites compatible", async
     "rrhh_planillas",
     "rrhh_planilla_items",
     "rrhh_descuentos",
+    "contrataciones",
+    "contrataciones_eventos",
+    "contrataciones_secuencia",
     "auditoria",
   ]) {
     assert.match(schema, new RegExp(`"${table}"`));
@@ -198,6 +201,28 @@ test("protects the complete Human Resources workflow and press-only agenda", asy
   assert.match(agendaUi, /canManageCabinetAgenda/);
   assert.match(agendaUi, /showForm && canManage/);
   assert.doesNotMatch(`${hrUi}\n${hrApi}\n${hrService}`, /HEALTH_DATABASE_URL|postgresql:\/\//i);
+});
+
+test("implements database-backed procurement management", async () => {
+  const [ui, api, service, schema, migration] = await Promise.all([
+    readFile(new URL("../app/contrataciones.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/contrataciones/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/contrataciones.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../drizzle/0007_smiling_miek.sql", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(ui, /Registrar nuevo proceso/);
+  assert.match(ui, /Monto referencial activo/);
+  assert.match(ui, /changeStatus/);
+  assert.match(api, /authorizeRequest\(request, "sigem\.routes\.read"\)/);
+  assert.match(api, /sigem\.routes\.create/);
+  assert.match(api, /sigem\.routes\.update/);
+  assert.match(service, /contratacionesSecuencia/);
+  assert.match(service, /contratacionesEventos/);
+  assert.match(schema, /"contrataciones_estado_check"/);
+  assert.match(migration, /CREATE TABLE "contrataciones"/);
+  assert.doesNotMatch(`${ui}\n${api}\n${service}`, /DATABASE_URL|postgresql:\/\//i);
 });
 
 test("enforces scoped institutional access with MFA and auditable roles", async () => {

@@ -50,6 +50,13 @@
       "when": 1787882023621,
       "tag": "0006_greedy_mastermind",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1787926658807,
+      "tag": "0007_smiling_miek",
+      "breakpoints": true
     }
   ]
 }

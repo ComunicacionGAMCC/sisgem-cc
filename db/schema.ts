@@ -389,6 +389,53 @@ export const rrhhDescuentos = pgTable(
   ],
 );
 
+export const contratacionesSecuencia = pgTable("contrataciones_secuencia", {
+  gestion: integer("gestion").primaryKey(),
+  ultimo: integer("ultimo").default(0).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const contrataciones = pgTable(
+  "contrataciones",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    codigo: varchar("codigo", { length: 24 }).notNull(),
+    objeto: varchar("objeto", { length: 300 }).notNull(),
+    modalidad: varchar("modalidad", { length: 60 }).notNull(),
+    estado: varchar("estado", { length: 40 }).default("preparacion").notNull(),
+    montoReferencial: numeric("monto_referencial", { precision: 16, scale: 2 }).default("0").notNull(),
+    unidadSolicitanteId: uuid("unidad_solicitante_id").notNull().references(() => unidades.id, { onDelete: "restrict" }),
+    responsableNombre: varchar("responsable_nombre", { length: 220 }),
+    fechaInicio: date("fecha_inicio").notNull(),
+    fechaLimite: date("fecha_limite"),
+    creadoPorUsuarioId: uuid("creado_por_usuario_id"),
+    creadoPorNombre: varchar("creado_por_nombre", { length: 220 }),
+    ...auditColumns,
+  },
+  (table) => [
+    uniqueIndex("contrataciones_codigo_uidx").on(table.codigo),
+    index("contrataciones_estado_fecha_idx").on(table.estado, table.fechaInicio),
+    index("contrataciones_unidad_idx").on(table.unidadSolicitanteId),
+    check("contrataciones_modalidad_check", sql`${table.modalidad} in ('menor', 'anpe', 'licitacion_publica', 'directa', 'excepcion')`),
+    check("contrataciones_estado_check", sql`${table.estado} in ('preparacion', 'certificacion', 'convocatoria', 'evaluacion', 'adjudicado', 'contrato', 'ejecucion', 'pago', 'concluido', 'cancelado')`),
+    check("contrataciones_monto_check", sql`${table.montoReferencial} >= 0`),
+  ],
+);
+
+export const contratacionesEventos = pgTable(
+  "contrataciones_eventos",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    contratacionId: uuid("contratacion_id").notNull().references(() => contrataciones.id, { onDelete: "cascade" }),
+    estado: varchar("estado", { length: 40 }).notNull(),
+    detalle: text("detalle"),
+    actorUsuarioId: uuid("actor_usuario_id"),
+    actorNombre: varchar("actor_nombre", { length: 220 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index("contrataciones_eventos_proceso_idx").on(table.contratacionId, table.createdAt)],
+);
+
 export const auditoria = pgTable(
   "auditoria",
   {

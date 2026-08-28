@@ -1,0 +1,38 @@
+.procurementMetric {
+  min-height: 112px;
+  padding: 18px;
+  border: 1px solid #dfe9df;
+  border-radius: 15px;
+  background: linear-gradient(145deg, #fff, #f5faf4);
+  display: flex;
+  flex-direction: column;
+}
+
+.procurementMetric span { color: #6f7f73; font-size: 10px; font-weight: 800; }
+.procurementMetric strong { color: #173f29; margin: 8px 0 4px; font-size: 24px; }
+.procurementMetric small { color: #879389; font-size: 9px; }
+.procurementTable { overflow: hidden; }
+.procurementTableHead,
+.procurementTableRow { display: grid; grid-template-columns: 115px minmax(240px, 1.6fr) minmax(130px, .8fr) 145px 120px; gap: 14px; align-items: center; }
+.procurementTableHead { padding: 13px 18px; color: #77857b; background: #f1f6f0; text-transform: uppercase; letter-spacing: .06em; font-size: 8px; font-weight: 900; }
+.procurementTableRow { min-height: 74px; padding: 13px 18px; border-top: 1px solid #e9efe9; color: #667269; font-size: 10px; }
+.procurementTableRow > strong,
+.procurementTableRow > b { color: #1d4a30; }
+.procurementTableRow > b { text-align: right; }
+.procurementTableRow > div { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.procurementTableRow > div b { color: #263f30; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.procurementTableRow > div small { color: #87938a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.procurementTableRow select { width: 100%; padding: 8px 9px; border: 1px solid #d9e5d9; border-radius: 9px; background: #f8fbf7; color: #28553a; font-size: 9px; font-weight: 800; }
+
+@media (max-width: 900px) {
+  .procurementTableHead,
+  .procurementTableRow { grid-template-columns: 100px 1fr 125px; }
+  .procurementTableHead span:nth-child(3), .procurementTableHead span:nth-child(5),
+  .procurementTableRow > span, .procurementTableRow > b { display: none; }
+}
+
+@media (max-width: 560px) {
+  .procurementTableHead,
+  .procurementTableRow { grid-template-columns: 85px 1fr; }
+  .procurementTableHead span:nth-child(4), .procurementTableRow select, .procurementTableRow > i { display: none; }
+}

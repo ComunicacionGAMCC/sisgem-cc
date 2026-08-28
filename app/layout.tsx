@@ -6,6 +6,7 @@ import "./premium-theme.css";
 import "./medical.css";
 import "./access.css";
 import "./recursos-humanos.css";
+import "./contrataciones.css";
 import "./hojas-ruta.css";
 
 const baseMetadata: Metadata = {
