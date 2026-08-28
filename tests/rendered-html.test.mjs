@@ -32,7 +32,6 @@ test("server-renders the Municipio Digital portal", async () => {
   assert.match(html, /Municipio Digital \| Cuatro Cañadas/);
   assert.match(html, /Gobierno Autónomo Municipal de Cuatro Cañadas/);
   assert.match(html, /id="seguimiento"/);
-  assert.match(html, /HR-2026-00481/);
   assert.match(html, /Consulta el código exacto entregado/);
   assert.match(html, /Saca tu ficha médica virtual aquí/);
   assert.match(html, /Hospital Municipal de Cuatro Cañadas/i);
@@ -42,6 +41,29 @@ test("server-renders the Municipio Digital portal", async () => {
   assert.match(html, /Secretaría General o en la unidad municipal competente/);
   assert.doesNotMatch(html, /Iniciar un trámite/);
   assert.doesNotMatch(html, /DATABASE_URL|postgresql:\/\//i);
+});
+
+test("implements the complete auditable route workflow", async () => {
+  const [ui, service, actionApi, attachmentApi, publicAttachmentApi, schema, migration] = await Promise.all([
+    readFile(new URL("../app/hojas-ruta.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../db/hojas-ruta.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/hojas-ruta/[id]/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/hojas-ruta/[id]/adjuntos/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/seguimiento/[codigo]/adjuntos/[attachmentId]/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../drizzle/0006_greedy_mastermind.sql", import.meta.url), "utf8"),
+  ]);
+  for (const action of ["receive", "derive", "act", "observe", "deadline", "close", "archive", "reopen"]) {
+    assert.match(service, new RegExp(`action\\.type === "${action}"`));
+  }
+  assert.match(ui, /Historial del trámite/);
+  assert.match(ui, /Documentos adjuntos/);
+  assert.match(ui, /Visible en seguimiento ciudadano/);
+  assert.match(actionApi, /authorizeRequest/);
+  assert.match(attachmentApi, /maximumSize = 3 \* 1024 \* 1024/);
+  assert.match(publicAttachmentApi, /obtenerAdjuntoPublico/);
+  assert.match(schema, /"hojas_ruta_adjuntos"/);
+  assert.match(migration, /CREATE TABLE "hojas_ruta_adjuntos"/);
 });
 
 test("keeps municipal data lazy, protected, and ChatGPT Sites compatible", async () => {

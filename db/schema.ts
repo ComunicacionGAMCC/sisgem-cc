@@ -200,12 +200,39 @@ export const eventosSeguimiento = pgTable(
     funcionarioId: uuid("funcionario_id").references(() => funcionarios.id, {
       onDelete: "set null",
     }),
+    actorUsuarioId: uuid("actor_usuario_id"),
+    actorNombre: varchar("actor_nombre", { length: 220 }),
     publico: boolean("publico").default(true).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
     index("eventos_seguimiento_hoja_idx").on(table.hojaRutaId),
     index("eventos_seguimiento_fecha_idx").on(table.createdAt),
+  ],
+);
+
+export const hojasRutaAdjuntos = pgTable(
+  "hojas_ruta_adjuntos",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    hojaRutaId: uuid("hoja_ruta_id")
+      .notNull()
+      .references(() => hojasDeRuta.id, { onDelete: "cascade" }),
+    eventoId: uuid("evento_id").references(() => eventosSeguimiento.id, { onDelete: "set null" }),
+    nombre: varchar("nombre", { length: 240 }).notNull(),
+    tipoMime: varchar("tipo_mime", { length: 120 }).notNull(),
+    tamanoBytes: integer("tamano_bytes").notNull(),
+    sha256: varchar("sha256", { length: 64 }).notNull(),
+    contenidoBase64: text("contenido_base64").notNull(),
+    publico: boolean("publico").default(false).notNull(),
+    subidoPorUsuarioId: uuid("subido_por_usuario_id"),
+    subidoPorNombre: varchar("subido_por_nombre", { length: 220 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("hojas_ruta_adjuntos_hoja_fecha_idx").on(table.hojaRutaId, table.createdAt),
+    index("hojas_ruta_adjuntos_evento_idx").on(table.eventoId),
+    check("hojas_ruta_adjuntos_tamano_check", sql`${table.tamanoBytes} > 0 and ${table.tamanoBytes} <= 3145728`),
   ],
 );
 

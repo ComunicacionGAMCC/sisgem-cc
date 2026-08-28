@@ -5,6 +5,7 @@ import {
   type FiltroHojas,
   type NuevaHojaRuta,
 } from "../../../db/hojas-ruta";
+import { listarUnidadesActivas } from "../../../db/unidades";
 import {
   AccessDeniedError,
   authorizeRequest,
@@ -21,12 +22,15 @@ export async function GET(request: NextRequest) {
     const filtro: FiltroHojas = ["todos", "pendientes", "finalizados"].includes(filtroParam)
       ? (filtroParam as FiltroHojas)
       : "todos";
-    const items = await listarHojasDeRuta({
-      buscar,
-      filtro,
-      unidadIds: scopedMunicipalUnitIds(context),
-    });
-    return NextResponse.json({ items });
+    const [items, units] = await Promise.all([
+      listarHojasDeRuta({
+        buscar,
+        filtro,
+        unidadIds: scopedMunicipalUnitIds(context),
+      }),
+      listarUnidadesActivas(),
+    ]);
+    return NextResponse.json({ items, units });
   } catch (error) {
     if (error instanceof AccessDeniedError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
@@ -38,7 +42,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await authorizeRequest(request, "sigem.routes.create");
+    const { context } = await authorizeRequest(request, "sigem.routes.create");
     const body = (await request.json()) as Partial<NuevaHojaRuta>;
     if (!body.remitente?.trim() || !body.asunto?.trim() || !body.unidadCodigo?.trim()) {
       return NextResponse.json(
@@ -47,6 +51,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const scopedUnits = scopedMunicipalUnitIds(context);
     const item = await crearHojaDeRuta({
       remitente: body.remitente,
       asunto: body.asunto,
@@ -57,6 +62,10 @@ export async function POST(request: NextRequest) {
       documento: body.documento,
       telefono: body.telefono,
       email: body.email,
+    }, {
+      userId: context.profile.id,
+      name: context.profile.fullName,
+      unitId: scopedUnits?.length === 1 ? scopedUnits[0] : null,
     });
 
     return NextResponse.json({ item }, { status: 201 });

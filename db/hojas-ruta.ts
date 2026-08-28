@@ -1,12 +1,12 @@
-import { and, desc, eq, ilike, inArray, notInArray, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, notInArray, or, sql } from "drizzle-orm";
 import { getMunicipalYear } from "../lib/municipal-date";
 import { getDb } from "./index";
 import {
   auditoria,
   derivaciones,
   eventosSeguimiento,
-  funcionarios,
   hojasDeRuta,
+  hojasRutaAdjuntos,
   secuenciasCodigo,
   solicitantes,
   unidades,
@@ -25,6 +25,29 @@ export type NuevaHojaRuta = {
   telefono?: string;
   email?: string;
 };
+
+export type ActorHojaRuta = {
+  userId: string;
+  name: string;
+  unitId?: string | null;
+};
+
+export type AccionHojaRuta =
+  | { type: "receive"; note?: string }
+  | { type: "derive"; destinationUnitId: string; note: string }
+  | { type: "act"; title: string; detail: string; public: boolean }
+  | { type: "observe"; detail: string; public: boolean }
+  | { type: "deadline"; dueAt: string; detail?: string }
+  | { type: "close"; detail: string; public: boolean }
+  | { type: "archive"; detail?: string }
+  | { type: "reopen"; detail: string };
+
+export class HojaRutaAccessError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "HojaRutaAccessError";
+  }
+}
 
 const estadoEtiquetas = {
   recibido: "Recibido",
@@ -150,6 +173,16 @@ export async function obtenerSeguimiento(codigo: string) {
     .leftJoin(unidades, eq(eventosSeguimiento.unidadId, unidades.id))
     .where(and(eq(eventosSeguimiento.hojaRutaId, hoja.id), eq(eventosSeguimiento.publico, true)))
     .orderBy(eventosSeguimiento.createdAt);
+  const adjuntos = await db.select({
+    id: hojasRutaAdjuntos.id,
+    name: hojasRutaAdjuntos.nombre,
+    mimeType: hojasRutaAdjuntos.tipoMime,
+    size: hojasRutaAdjuntos.tamanoBytes,
+    createdAt: hojasRutaAdjuntos.createdAt,
+  }).from(hojasRutaAdjuntos).where(and(
+    eq(hojasRutaAdjuntos.hojaRutaId, hoja.id),
+    eq(hojasRutaAdjuntos.publico, true),
+  )).orderBy(hojasRutaAdjuntos.createdAt);
 
   return {
     ...hoja,
@@ -162,7 +195,26 @@ export async function obtenerSeguimiento(codigo: string) {
       status: estadoEtiquetas[evento.state],
       createdAt: evento.createdAt.toISOString(),
     })),
+    attachments: adjuntos.map((adjunto) => ({ ...adjunto, createdAt: adjunto.createdAt.toISOString() })),
   };
+}
+
+export async function obtenerAdjuntoPublico(codigo: string, attachmentId: string) {
+  const db = getDb();
+  const [attachment] = await db.select({
+    name: hojasRutaAdjuntos.nombre,
+    mimeType: hojasRutaAdjuntos.tipoMime,
+    base64: hojasRutaAdjuntos.contenidoBase64,
+  }).from(hojasRutaAdjuntos).innerJoin(
+    hojasDeRuta,
+    eq(hojasDeRuta.id, hojasRutaAdjuntos.hojaRutaId),
+  ).where(and(
+    eq(hojasDeRuta.codigo, codigo.trim().toUpperCase()),
+    eq(hojasRutaAdjuntos.id, attachmentId),
+    eq(hojasRutaAdjuntos.publico, true),
+  )).limit(1);
+  if (!attachment) throw new Error("El documento no existe o no es público.");
+  return attachment;
 }
 
 async function siguienteCodigo() {
@@ -183,7 +235,7 @@ async function siguienteCodigo() {
   return `HR-${gestion}-${String(ultimo).padStart(5, "0")}`;
 }
 
-export async function crearHojaDeRuta(input: NuevaHojaRuta) {
+export async function crearHojaDeRuta(input: NuevaHojaRuta, actor?: ActorHojaRuta) {
   const db = getDb();
   const [unidad] = await db
     .select()
@@ -192,12 +244,6 @@ export async function crearHojaDeRuta(input: NuevaHojaRuta) {
     .limit(1);
 
   if (!unidad) throw new Error("La unidad de destino no existe o no está activa.");
-
-  const [funcionario] = await db
-    .select({ id: funcionarios.id, unidadId: funcionarios.unidadId })
-    .from(funcionarios)
-    .where(eq(funcionarios.activo, true))
-    .limit(1);
 
   const datosSolicitante = {
     tipo: "persona" as const,
@@ -238,16 +284,16 @@ export async function crearHojaDeRuta(input: NuevaHojaRuta) {
       estado: "derivado",
       solicitanteId: solicitante.id,
       unidadActualId: unidad.id,
-      creadoPorId: funcionario?.id ?? null,
+      creadoPorId: null,
       fechaLimite,
     })
     .returning();
 
   await db.insert(derivaciones).values({
     hojaRutaId: hoja.id,
-    unidadOrigenId: funcionario?.unidadId ?? null,
+    unidadOrigenId: actor?.unitId ?? null,
     unidadDestinoId: unidad.id,
-    derivadoPorId: funcionario?.id ?? null,
+    derivadoPorId: null,
     estado: "pendiente",
     nota: "Derivación inicial al registrar la hoja de ruta.",
   });
@@ -258,8 +304,10 @@ export async function crearHojaDeRuta(input: NuevaHojaRuta) {
       estado: "recibido",
       titulo: "Solicitud recibida",
       descripcion: "La solicitud fue registrada en el sistema municipal.",
-      unidadId: funcionario?.unidadId ?? unidad.id,
-      funcionarioId: funcionario?.id ?? null,
+      unidadId: actor?.unitId ?? unidad.id,
+      funcionarioId: null,
+      actorUsuarioId: actor?.userId ?? null,
+      actorNombre: actor?.name ?? null,
       publico: true,
     },
     {
@@ -268,7 +316,9 @@ export async function crearHojaDeRuta(input: NuevaHojaRuta) {
       titulo: `Derivada a ${unidad.nombre}`,
       descripcion: "La unidad responsable recibió la asignación inicial.",
       unidadId: unidad.id,
-      funcionarioId: funcionario?.id ?? null,
+      funcionarioId: null,
+      actorUsuarioId: actor?.userId ?? null,
+      actorNombre: actor?.name ?? null,
       publico: true,
     },
   ]);
@@ -277,9 +327,322 @@ export async function crearHojaDeRuta(input: NuevaHojaRuta) {
     entidad: "hoja_de_ruta",
     entidadId: hoja.id,
     accion: "crear",
-    funcionarioId: funcionario?.id ?? null,
-    detalle: { codigo, unidadDestino: unidad.codigo, prioridad: hoja.prioridad },
+    funcionarioId: null,
+    detalle: { codigo, unidadDestino: unidad.codigo, prioridad: hoja.prioridad, actorUserId: actor?.userId, actorName: actor?.name },
   });
 
   return obtenerSeguimiento(codigo);
+}
+
+async function verificarAccesoHojaRuta(
+  hojaRutaId: string,
+  unidadIds: string[] | null,
+  soloUnidadActual = false,
+) {
+  const db = getDb();
+  const [hoja] = await db
+    .select({ id: hojasDeRuta.id, state: hojasDeRuta.estado, currentUnitId: hojasDeRuta.unidadActualId })
+    .from(hojasDeRuta)
+    .where(eq(hojasDeRuta.id, hojaRutaId))
+    .limit(1);
+  if (!hoja) throw new Error("La hoja de ruta no existe.");
+  if (unidadIds === null) return hoja;
+  if (unidadIds.includes(hoja.currentUnitId)) return hoja;
+  if (soloUnidadActual) throw new HojaRutaAccessError("La hoja de ruta pertenece actualmente a otra unidad.");
+  if (!unidadIds.length) throw new HojaRutaAccessError("Tu cuenta no tiene una unidad municipal asignada.");
+
+  const [participacion] = await db
+    .select({ id: derivaciones.id })
+    .from(derivaciones)
+    .where(and(
+      eq(derivaciones.hojaRutaId, hojaRutaId),
+      or(
+        inArray(derivaciones.unidadOrigenId, unidadIds),
+        inArray(derivaciones.unidadDestinoId, unidadIds),
+      ),
+    ))
+    .limit(1);
+  if (!participacion) throw new HojaRutaAccessError("No tienes acceso a esta hoja de ruta.");
+  return hoja;
+}
+
+export async function obtenerDetalleHojaRuta(hojaRutaId: string, unidadIds: string[] | null) {
+  await verificarAccesoHojaRuta(hojaRutaId, unidadIds);
+  const db = getDb();
+  const [hojas, unidadesMunicipales, eventos, movimientos, adjuntos] = await Promise.all([
+    db.select({
+      id: hojasDeRuta.id,
+      code: hojasDeRuta.codigo,
+      type: hojasDeRuta.tipo,
+      title: hojasDeRuta.asunto,
+      description: hojasDeRuta.descripcion,
+      priority: hojasDeRuta.prioridad,
+      state: hojasDeRuta.estado,
+      currentUnitId: hojasDeRuta.unidadActualId,
+      currentUnit: unidades.nombre,
+      dueAt: hojasDeRuta.fechaLimite,
+      finishedAt: hojasDeRuta.finalizadoAt,
+      createdAt: hojasDeRuta.createdAt,
+      updatedAt: hojasDeRuta.updatedAt,
+      sender: solicitantes.nombre,
+      senderDocument: solicitantes.documento,
+      senderPhone: solicitantes.telefono,
+      senderEmail: solicitantes.email,
+    }).from(hojasDeRuta)
+      .innerJoin(unidades, eq(unidades.id, hojasDeRuta.unidadActualId))
+      .innerJoin(solicitantes, eq(solicitantes.id, hojasDeRuta.solicitanteId))
+      .where(eq(hojasDeRuta.id, hojaRutaId)).limit(1),
+    db.select({ id: unidades.id, code: unidades.codigo, name: unidades.nombre })
+      .from(unidades).where(eq(unidades.activa, true)).orderBy(asc(unidades.nombre)),
+    db.select({
+      id: eventosSeguimiento.id,
+      state: eventosSeguimiento.estado,
+      title: eventosSeguimiento.titulo,
+      description: eventosSeguimiento.descripcion,
+      unitId: eventosSeguimiento.unidadId,
+      public: eventosSeguimiento.publico,
+      actorName: eventosSeguimiento.actorNombre,
+      createdAt: eventosSeguimiento.createdAt,
+    }).from(eventosSeguimiento)
+      .where(eq(eventosSeguimiento.hojaRutaId, hojaRutaId))
+      .orderBy(desc(eventosSeguimiento.createdAt)),
+    db.select().from(derivaciones)
+      .where(eq(derivaciones.hojaRutaId, hojaRutaId))
+      .orderBy(desc(derivaciones.derivadoAt)),
+    db.select({
+      id: hojasRutaAdjuntos.id,
+      eventId: hojasRutaAdjuntos.eventoId,
+      name: hojasRutaAdjuntos.nombre,
+      mimeType: hojasRutaAdjuntos.tipoMime,
+      size: hojasRutaAdjuntos.tamanoBytes,
+      public: hojasRutaAdjuntos.publico,
+      uploadedBy: hojasRutaAdjuntos.subidoPorNombre,
+      createdAt: hojasRutaAdjuntos.createdAt,
+    }).from(hojasRutaAdjuntos)
+      .where(eq(hojasRutaAdjuntos.hojaRutaId, hojaRutaId))
+      .orderBy(desc(hojasRutaAdjuntos.createdAt)),
+  ]);
+  const [hoja] = hojas;
+  if (!hoja) throw new Error("La hoja de ruta no existe.");
+  const unitNames = new Map(unidadesMunicipales.map((unit) => [unit.id, unit.name]));
+  return {
+    ...hoja,
+    status: estadoEtiquetas[hoja.state],
+    tone: tonoEstado(hoja.state, hoja.priority),
+    due: textoVencimiento(hoja.dueAt, hoja.state),
+    dueAt: hoja.dueAt?.toISOString() ?? null,
+    finishedAt: hoja.finishedAt?.toISOString() ?? null,
+    createdAt: hoja.createdAt.toISOString(),
+    updatedAt: hoja.updatedAt.toISOString(),
+    units: unidadesMunicipales,
+    events: eventos.map((event) => ({
+      ...event,
+      status: estadoEtiquetas[event.state],
+      unit: event.unitId ? unitNames.get(event.unitId) ?? null : null,
+      createdAt: event.createdAt.toISOString(),
+    })),
+    derivations: movimientos.map((movement) => ({
+      id: movement.id,
+      originUnit: movement.unidadOrigenId ? unitNames.get(movement.unidadOrigenId) ?? null : null,
+      destinationUnit: unitNames.get(movement.unidadDestinoId) ?? "Unidad municipal",
+      state: movement.estado,
+      note: movement.nota,
+      derivedAt: movement.derivadoAt.toISOString(),
+      receivedAt: movement.recibidoAt?.toISOString() ?? null,
+    })),
+    attachments: adjuntos.map((attachment) => ({ ...attachment, createdAt: attachment.createdAt.toISOString() })),
+  };
+}
+
+export async function gestionarHojaRuta(
+  hojaRutaId: string,
+  action: AccionHojaRuta,
+  actor: ActorHojaRuta,
+  unidadIds: string[] | null,
+) {
+  const hoja = await verificarAccesoHojaRuta(hojaRutaId, unidadIds, true);
+  const closedStates = new Set(["finalizado", "archivado"]);
+  if (closedStates.has(hoja.state) && action.type !== "archive" && action.type !== "reopen") {
+    throw new Error("La hoja de ruta está cerrada. Debes reabrirla antes de modificarla.");
+  }
+  const db = getDb();
+  let eventState: keyof typeof estadoEtiquetas = hoja.state;
+  let eventTitle = "Actuación registrada";
+  let eventDetail = "";
+  let eventPublic = false;
+  let eventUnitId = hoja.currentUnitId;
+
+  // Neon HTTP no soporta transacciones interactivas. Las operaciones se
+  // ejecutan secuencialmente y se respaldan con su registro de auditoría.
+  const tx = db;
+  {
+    if (action.type === "receive") {
+      await tx.update(derivaciones).set({ estado: "recibida", recibidoAt: new Date() })
+        .where(and(eq(derivaciones.hojaRutaId, hojaRutaId), eq(derivaciones.estado, "pendiente")));
+      await tx.update(hojasDeRuta).set({ estado: "en_proceso", updatedAt: new Date() })
+        .where(eq(hojasDeRuta.id, hojaRutaId));
+      eventState = "en_proceso";
+      eventTitle = "Recepción confirmada";
+      eventDetail = action.note?.trim() || "La unidad responsable confirmó la recepción de la documentación.";
+      eventPublic = true;
+    } else if (action.type === "derive") {
+      const [destination] = await tx.select({ id: unidades.id, name: unidades.nombre })
+        .from(unidades).where(and(eq(unidades.id, action.destinationUnitId), eq(unidades.activa, true))).limit(1);
+      if (!destination) throw new Error("La unidad de destino no existe o está inactiva.");
+      if (destination.id === hoja.currentUnitId) throw new Error("Selecciona una unidad de destino diferente.");
+      await tx.update(derivaciones).set({ estado: "atendida" })
+        .where(and(eq(derivaciones.hojaRutaId, hojaRutaId), inArray(derivaciones.estado, ["pendiente", "recibida"])));
+      await tx.insert(derivaciones).values({
+        hojaRutaId,
+        unidadOrigenId: hoja.currentUnitId,
+        unidadDestinoId: destination.id,
+        estado: "pendiente",
+        nota: action.note.trim(),
+      });
+      await tx.update(hojasDeRuta).set({
+        unidadActualId: destination.id,
+        estado: "derivado",
+        updatedAt: new Date(),
+      }).where(eq(hojasDeRuta.id, hojaRutaId));
+      eventState = "derivado";
+      eventTitle = `Derivada a ${destination.name}`;
+      eventDetail = action.note.trim();
+      eventPublic = true;
+      eventUnitId = destination.id;
+    } else if (action.type === "act") {
+      await tx.update(hojasDeRuta).set({ estado: "en_proceso", updatedAt: new Date() })
+        .where(eq(hojasDeRuta.id, hojaRutaId));
+      eventState = "en_proceso";
+      eventTitle = action.title.trim();
+      eventDetail = action.detail.trim();
+      eventPublic = action.public;
+    } else if (action.type === "observe") {
+      await tx.update(hojasDeRuta).set({ estado: "observado", updatedAt: new Date() })
+        .where(eq(hojasDeRuta.id, hojaRutaId));
+      eventState = "observado";
+      eventTitle = "Trámite observado";
+      eventDetail = action.detail.trim();
+      eventPublic = action.public;
+    } else if (action.type === "deadline") {
+      const dueAt = new Date(`${action.dueAt}T23:59:59-04:00`);
+      if (Number.isNaN(dueAt.getTime())) throw new Error("La fecha límite no es válida.");
+      await tx.update(hojasDeRuta).set({ fechaLimite: dueAt, updatedAt: new Date() })
+        .where(eq(hojasDeRuta.id, hojaRutaId));
+      eventTitle = "Plazo actualizado";
+      eventDetail = action.detail?.trim() || `Nueva fecha límite: ${action.dueAt}.`;
+      eventPublic = false;
+    } else if (action.type === "close") {
+      const now = new Date();
+      await tx.update(derivaciones).set({ estado: "atendida" })
+        .where(and(eq(derivaciones.hojaRutaId, hojaRutaId), inArray(derivaciones.estado, ["pendiente", "recibida"])));
+      await tx.update(hojasDeRuta).set({ estado: "finalizado", finalizadoAt: now, updatedAt: now })
+        .where(eq(hojasDeRuta.id, hojaRutaId));
+      eventState = "finalizado";
+      eventTitle = "Respuesta y cierre";
+      eventDetail = action.detail.trim();
+      eventPublic = action.public;
+    } else if (action.type === "archive") {
+      if (hoja.state !== "finalizado") throw new Error("Solo se puede archivar una hoja finalizada.");
+      await tx.update(hojasDeRuta).set({ estado: "archivado", updatedAt: new Date() })
+        .where(eq(hojasDeRuta.id, hojaRutaId));
+      eventState = "archivado";
+      eventTitle = "Trámite archivado";
+      eventDetail = action.detail?.trim() || "El expediente fue enviado al archivo institucional.";
+      eventPublic = false;
+    } else if (action.type === "reopen") {
+      if (!closedStates.has(hoja.state)) throw new Error("La hoja de ruta todavía está activa.");
+      await tx.update(hojasDeRuta).set({ estado: "en_proceso", finalizadoAt: null, updatedAt: new Date() })
+        .where(eq(hojasDeRuta.id, hojaRutaId));
+      eventState = "en_proceso";
+      eventTitle = "Trámite reabierto";
+      eventDetail = action.detail.trim();
+      eventPublic = false;
+    }
+
+    await tx.insert(eventosSeguimiento).values({
+      hojaRutaId,
+      estado: eventState,
+      titulo: eventTitle,
+      descripcion: eventDetail || null,
+      unidadId: eventUnitId,
+      actorUsuarioId: actor.userId,
+      actorNombre: actor.name,
+      publico: eventPublic,
+    });
+    await tx.insert(auditoria).values({
+      entidad: "hoja_de_ruta",
+      entidadId: hojaRutaId,
+      accion: action.type,
+      detalle: { actorUserId: actor.userId, actorName: actor.name, action },
+    });
+  }
+  return obtenerDetalleHojaRuta(hojaRutaId, unidadIds);
+}
+
+export async function guardarAdjuntoHojaRuta(input: {
+  hojaRutaId: string;
+  name: string;
+  mimeType: string;
+  size: number;
+  sha256: string;
+  base64: string;
+  public: boolean;
+  actor: ActorHojaRuta;
+  unitIds: string[] | null;
+}) {
+  const hoja = await verificarAccesoHojaRuta(input.hojaRutaId, input.unitIds, true);
+  if (hoja.state === "archivado") throw new Error("No se pueden agregar documentos a un expediente archivado.");
+  const db = getDb();
+  const tx = db;
+  {
+    const [event] = await tx.insert(eventosSeguimiento).values({
+      hojaRutaId: input.hojaRutaId,
+      estado: hoja.state,
+      titulo: "Documento adjunto",
+      descripcion: input.name,
+      unidadId: hoja.currentUnitId,
+      actorUsuarioId: input.actor.userId,
+      actorNombre: input.actor.name,
+      publico: input.public,
+    }).returning({ id: eventosSeguimiento.id });
+    const [attachment] = await tx.insert(hojasRutaAdjuntos).values({
+      hojaRutaId: input.hojaRutaId,
+      eventoId: event.id,
+      nombre: input.name,
+      tipoMime: input.mimeType,
+      tamanoBytes: input.size,
+      sha256: input.sha256,
+      contenidoBase64: input.base64,
+      publico: input.public,
+      subidoPorUsuarioId: input.actor.userId,
+      subidoPorNombre: input.actor.name,
+    }).returning({ id: hojasRutaAdjuntos.id });
+    await tx.insert(auditoria).values({
+      entidad: "hoja_ruta_adjunto",
+      entidadId: attachment.id,
+      accion: "subir",
+      detalle: { hojaRutaId: input.hojaRutaId, name: input.name, size: input.size, sha256: input.sha256, actorUserId: input.actor.userId },
+    });
+    return obtenerDetalleHojaRuta(input.hojaRutaId, input.unitIds);
+  }
+}
+
+export async function obtenerAdjuntoHojaRuta(
+  hojaRutaId: string,
+  attachmentId: string,
+  unidadIds: string[] | null,
+) {
+  await verificarAccesoHojaRuta(hojaRutaId, unidadIds);
+  const [attachment] = await getDb().select({
+    id: hojasRutaAdjuntos.id,
+    name: hojasRutaAdjuntos.nombre,
+    mimeType: hojasRutaAdjuntos.tipoMime,
+    size: hojasRutaAdjuntos.tamanoBytes,
+    base64: hojasRutaAdjuntos.contenidoBase64,
+  }).from(hojasRutaAdjuntos).where(and(
+    eq(hojasRutaAdjuntos.id, attachmentId),
+    eq(hojasRutaAdjuntos.hojaRutaId, hojaRutaId),
+  )).limit(1);
+  if (!attachment) throw new Error("El documento adjunto no existe.");
+  return attachment;
 }

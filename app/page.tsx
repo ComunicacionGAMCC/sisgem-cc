@@ -6,6 +6,7 @@ import { AccessGate, AccessManagement, AccessProvider, useAccess } from "./acces
 import { AgendaModule, AgendaSummary, canAccessCabinetAgenda } from "./agenda";
 import { MedicalBookingCard, MedicalModule } from "./medical";
 import { HumanResourcesModule } from "./recursos-humanos";
+import { RouteCreateModal, RouteWorkflowPanel } from "./hojas-ruta";
 import { useMunicipalDate } from "./use-municipal-date";
 
 type InternalView = "inicio" | "hojas" | "fichas" | "accesos" | "rrhh" | "contrataciones" | "agenda" | "transparencia";
@@ -17,13 +18,6 @@ const services = [
   { number: "04", title: "Requisitos y servicios", description: "Conoce requisitos, horarios y lugares de atención antes de acudir.", color: "violet" },
   { number: "05", title: "Denuncia anónima", description: "Informa posibles hechos de corrupción mediante un canal protegido.", color: "pink", target: "denuncia" },
   { number: "06", title: "Transparencia", description: "Revisa presupuesto, obras, contrataciones y resultados.", color: "navy" },
-] as const;
-
-const fallbackRoutes = [
-  { code: "HR-2026-00481", title: "Solicitud de spot para feria educativa", sender: "U.E. Nacional Cuatro Cañadas", unit: "Comunicación", status: "Urgente", due: "Vence hoy", tone: "danger" },
-  { code: "HR-2026-00477", title: "Solicitud de mantenimiento de alumbrado", sender: "OTB 15 de Agosto", unit: "Obras Públicas", status: "En proceso", due: "2 días restantes", tone: "progress" },
-  { code: "HR-2026-00469", title: "Solicitud de apoyo técnico productivo", sender: "Asociación de productores", unit: "Desarrollo Agropecuario", status: "Recibido", due: "3 días restantes", tone: "received" },
-  { code: "HR-2026-00454", title: "Certificación de datos catastrales", sender: "María Elena Vargas", unit: "Catastro", status: "Finalizado", due: "Respondido hoy", tone: "done" },
 ] as const;
 
 type RouteItem = {
@@ -43,6 +37,8 @@ type RouteItem = {
   dueAt?: string | null;
 };
 
+type MunicipalUnit = { id: string; code: string; name: string };
+
 type TrackingResult = {
   code: string;
   title: string;
@@ -59,6 +55,7 @@ type TrackingResult = {
     status: string;
     createdAt: string;
   }>;
+  attachments?: Array<{ id: string; name: string; mimeType: string; size: number; createdAt: string }>;
 };
 
 function scrollToSection(id: string) {
@@ -86,7 +83,8 @@ function HomeContent() {
   const [routeModal, setRouteModal] = useState<"form" | "success" | null>(null);
   const [routeFilter, setRouteFilter] = useState<"todos" | "pendientes" | "finalizados">("todos");
   const [routeSearch, setRouteSearch] = useState("");
-  const [routeItems, setRouteItems] = useState<RouteItem[]>([...fallbackRoutes]);
+  const [routeItems, setRouteItems] = useState<RouteItem[]>([]);
+  const [routeUnits, setRouteUnits] = useState<MunicipalUnit[]>([]);
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeDataLive, setRouteDataLive] = useState(false);
   const [routeRefresh, setRouteRefresh] = useState(0);
@@ -119,12 +117,14 @@ function HomeContent() {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
         if (!response.ok) throw new Error("No se pudo consultar la base de datos.");
-        const data = (await response.json()) as { items: RouteItem[] };
+        const data = (await response.json()) as { items: RouteItem[]; units?: MunicipalUnit[] };
         setRouteItems(data.items);
+        setRouteUnits(data.units ?? []);
         setRouteDataLive(true);
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
-        setRouteItems([...fallbackRoutes]);
+        setRouteItems([]);
+        setRouteUnits([]);
         setRouteDataLive(false);
       } finally {
         setRouteLoading(false);
@@ -221,6 +221,8 @@ function HomeContent() {
           setRouteModal("success");
           setRouteRefresh((value) => value + 1);
         }}
+        routeUnits={routeUnits}
+        refreshRoutes={() => setRouteRefresh((value) => value + 1)}
         today={municipalDate}
       />
     );
@@ -317,6 +319,7 @@ function HomeContent() {
             <div className="trackingEvents">
               {trackingResult.events.map((event) => <article key={event.id}><i /><span><strong>{event.title}</strong><small>{event.description || event.unit || event.status}</small></span><time>{formatMunicipalDate(event.createdAt, { day: "2-digit", month: "2-digit", year: "numeric" })}</time></article>)}
             </div>
+            {Boolean(trackingResult.attachments?.length) && <div className="publicAttachments"><strong>Documentos disponibles</strong>{trackingResult.attachments?.map((file) => <a key={file.id} href={`/api/seguimiento/${encodeURIComponent(trackingResult.code)}/adjuntos/${file.id}`} download>{file.name}<small>{Math.ceil(file.size / 1024)} KB</small></a>)}</div>}
           </section>
         )}
         {trackingError && <p className="trackingError" role="alert">{trackingError}</p>}
@@ -343,7 +346,7 @@ function HowStep({ number, title, text }: { number: string; title: string; text:
   return <div><b>{number}</b><h3>{title}</h3><p>{text}</p></div>;
 }
 
-function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, setFilter, search, setSearch, visibleRoutes, allRoutes, routeLoading, routeDataLive, routeModal, setRouteModal, createdCode, routeCreated, today }: {
+function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, setFilter, search, setSearch, visibleRoutes, allRoutes, routeLoading, routeDataLive, routeModal, setRouteModal, createdCode, routeCreated, routeUnits, refreshRoutes, today }: {
   view: InternalView;
   setView: (view: InternalView) => void;
   openCitizen: () => void;
@@ -360,6 +363,8 @@ function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, se
   setRouteModal: (value: "form" | "success" | null) => void;
   createdCode: string;
   routeCreated: (code: string) => void;
+  routeUnits: MunicipalUnit[];
+  refreshRoutes: () => void;
   today: Date | null;
 }) {
   const access = useAccess();
@@ -390,7 +395,7 @@ function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, se
       <main className="internalMain">
         <header className="internalHeader"><div><span className="sectionKicker">MUNICIPIO DIGITAL</span><h1>{titles[view]}</h1></div><div className="headerActions"><span className="demoPill live" title={routeDataLive ? "Datos municipales conectados" : "Acceso institucional verificado"}><i /> Acceso protegido · 2FA</span><button className="iconButton" aria-label="Notificaciones">●<span className="notificationDot" /></button><button className="portalLink" onClick={openCitizen}>Ver portal ciudadano</button></div></header>
         {view === "inicio" && <Dashboard setView={setView} openRouteModal={openRouteModal} items={allRoutes} userName={greetingName} today={today} canAccessAgenda={canAccessAgenda} />}
-        {view === "hojas" && <RoutesModule openRouteModal={openRouteModal} filter={filter} setFilter={setFilter} search={search} setSearch={setSearch} visibleRoutes={visibleRoutes} allRoutes={allRoutes} loading={routeLoading} />}
+        {view === "hojas" && <RoutesModule openRouteModal={openRouteModal} filter={filter} setFilter={setFilter} search={search} setSearch={setSearch} visibleRoutes={visibleRoutes} allRoutes={allRoutes} loading={routeLoading} refresh={refreshRoutes} />}
         {view === "fichas" && <MedicalModule />}
         {view === "accesos" && <AccessManagement />}
         {view === "rrhh" && <HumanResourcesModule />}
@@ -398,7 +403,7 @@ function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, se
         {view === "agenda" && <AgendaModule today={today} />}
         {view === "transparencia" && <TransparencyModule today={today} />}
       </main>
-      {routeModal && <RouteModal mode={routeModal} close={() => setRouteModal(null)} succeed={routeCreated} createdCode={createdCode} />}
+      {routeModal && <RouteCreateModal mode={routeModal} close={() => setRouteModal(null)} succeed={routeCreated} createdCode={createdCode} units={routeUnits} />}
     </div>
   );
 }
@@ -441,10 +446,8 @@ function ProcessStep({ complete = false, number, title, note }: { complete?: boo
   return <div className={`processStep ${complete ? "complete" : ""}`}><div className="stepTop"><span>{number}</span><i /></div><strong>{title}</strong><small>{note}</small></div>;
 }
 
-function RoutesModule({ openRouteModal, filter, setFilter, search, setSearch, visibleRoutes, allRoutes, loading }: { openRouteModal: () => void; filter: "todos" | "pendientes" | "finalizados"; setFilter: (value: "todos" | "pendientes" | "finalizados") => void; search: string; setSearch: (value: string) => void; visibleRoutes: readonly RouteItem[]; allRoutes: readonly RouteItem[]; loading: boolean }) {
-  const finalizados = allRoutes.filter((route) => route.status === "Finalizado" || route.status === "Archivado").length;
-  const pendientes = allRoutes.length - finalizados;
-  return <section className="moduleView"><div className="moduleTitle"><div><h2>Bandeja de hojas de ruta</h2><p>Solicitudes reales registradas y derivadas a las unidades municipales</p></div><button className="primaryAction" onClick={openRouteModal}><span>＋</span>Nueva hoja de ruta</button></div><div className="filterBar"><input aria-label="Buscar por código, asunto o remitente" placeholder="Buscar por código, asunto o remitente" value={search} onChange={(event) => setSearch(event.target.value)} /><button className={filter === "todos" ? "selected" : ""} onClick={() => setFilter("todos")}>Todos {allRoutes.length}</button><button className={filter === "pendientes" ? "selected" : ""} onClick={() => setFilter("pendientes")}>Pendientes {pendientes}</button><button className={filter === "finalizados" ? "selected" : ""} onClick={() => setFilter("finalizados")}>Finalizados {finalizados}</button></div><section className="panel">{loading ? <p className="loadingState">Actualizando hojas de ruta…</p> : <RouteList items={visibleRoutes} full />}</section></section>;
+function RoutesModule({ openRouteModal, filter, setFilter, search, setSearch, visibleRoutes, allRoutes, loading, refresh }: { openRouteModal: () => void; filter: "todos" | "pendientes" | "finalizados"; setFilter: (value: "todos" | "pendientes" | "finalizados") => void; search: string; setSearch: (value: string) => void; visibleRoutes: readonly RouteItem[]; allRoutes: readonly RouteItem[]; loading: boolean; refresh: () => void }) {
+  return <RouteWorkflowPanel openRouteModal={openRouteModal} filter={filter} setFilter={setFilter} search={search} setSearch={setSearch} visibleRoutes={visibleRoutes} allRoutes={allRoutes} loading={loading} refresh={refresh} />;
 }
 
 function ProcurementModule({ openRouteModal }: { openRouteModal: () => void }) {
@@ -461,7 +464,10 @@ function TransparencyModule({ today }: { today: Date | null }) {
   return <section className="moduleView"><div className="moduleTitle"><div><h2>Transparencia municipal</h2><p>Información pública preparada para la ciudadanía</p></div><button className="primaryAction">Publicar actualización</button></div><section className="transparencyHero"><div><span>EJECUCIÓN PRESUPUESTARIA {year}</span><strong>62,8%</strong><p>Información demostrativa pendiente de conexión con la fuente oficial.</p></div><div className="donut"><span>63<small>%</small></span></div></section><div className="statGrid"><StatCard color="blue" label="Presupuesto vigente" value="Bs 84,2 M" note={`Gestión ${year}`} /><StatCard color="green" label="Ejecutado" value="Bs 52,9 M" note={`Al ${dateLabel}`} /><StatCard color="orange" label="Proyectos activos" value="38" note="12 con avance público" /><StatCard color="violet" label="Procesos publicados" value="117" note="Sincronización pendiente" /></div></section>;
 }
 
-function RouteModal({ mode, close, succeed, createdCode }: { mode: "form" | "success"; close: () => void; succeed: (code: string) => void; createdCode: string }) {
+// Conservado temporalmente para compatibilidad visual con pruebas históricas.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function RouteModal({ mode, close, succeed, createdCode, units }: { mode: "form" | "success"; close: () => void; succeed: (code: string) => void; createdCode: string; units: MunicipalUnit[] }) {
+  void units;
   const access = useAccess();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");

@@ -1,0 +1,56 @@
+.routeDetailBackdrop { align-items: flex-start; overflow-y: auto; padding: 28px; }
+.routeDetail { width: min(1180px, 96vw); margin: auto; border: 1px solid #d8e6da; border-radius: 24px; background: #f8fbf7; box-shadow: 0 30px 80px rgba(13, 67, 39, .22); overflow: hidden; }
+.routeDetailHeader { display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; padding: 26px 30px; color: #fff; background: linear-gradient(125deg, #0c4f2e, #1d7a44 70%, #90bd35); }
+.routeDetailHeader span { font-size: .75rem; letter-spacing: .15em; font-weight: 900; color: #d9f3b1; }
+.routeDetailHeader h2 { margin: 6px 0; font-size: 1.55rem; }
+.routeDetailHeader p { margin: 0; color: #e8f4eb; }
+.routeDetailHeader > button { border: 0; background: rgba(255,255,255,.15); color: white; width: 40px; height: 40px; border-radius: 50%; font-size: 1.6rem; cursor: pointer; }
+.routeSummary { display: grid; grid-template-columns: auto repeat(3, 1fr); gap: 14px; align-items: center; padding: 18px 30px; background: white; border-bottom: 1px solid #e3ebe4; }
+.routeSummary > span { justify-self: start; padding: 8px 13px; border-radius: 999px; font-size: .75rem; font-weight: 900; background: #edf7e9; color: #176539; }
+.routeSummary div { display: flex; flex-direction: column; gap: 3px; }
+.routeSummary small { color: #75827a; }
+.routeSummary strong { color: #153b29; font-size: .86rem; text-transform: capitalize; }
+.routeDescription { margin: 18px 30px 0; padding: 14px 16px; border-left: 4px solid #d9b51f; border-radius: 8px; background: #fffced; color: #3b493f; }
+.routeDetailGrid { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 22px; padding: 24px 30px 30px; }
+.routeSection, .routeActions { border: 1px solid #dce7de; border-radius: 18px; background: white; padding: 20px; }
+.routeSection + .routeSection { margin-top: 20px; }
+.routeSection h3, .routeActions h3 { margin: 0 0 18px; color: #123d28; font-size: 1.05rem; }
+.routeTimeline { display: grid; }
+.routeTimeline article { display: grid; grid-template-columns: 18px 1fr; gap: 12px; position: relative; padding-bottom: 18px; }
+.routeTimeline article:not(:last-child)::before { content: ""; position: absolute; left: 5px; top: 12px; bottom: 0; width: 2px; background: #d9e7dc; }
+.routeTimeline i { position: relative; z-index: 1; width: 12px; height: 12px; border: 3px solid #eaf5ec; border-radius: 50%; background: #2f954f; box-sizing: border-box; }
+.routeTimeline article div { display: grid; gap: 4px; }
+.routeTimeline strong { color: #183d2a; }
+.routeTimeline span, .routeTimeline small { color: #78867d; font-size: .74rem; }
+.routeTimeline p { margin: 3px 0; color: #45554b; line-height: 1.45; }
+.routeActions { align-self: start; position: sticky; top: 20px; }
+.routeActions form { display: grid; gap: 13px; }
+.routeActions label { display: grid; gap: 6px; font-size: .77rem; font-weight: 800; color: #395344; }
+.routeActions select, .routeActions input, .routeActions textarea { width: 100%; border: 1px solid #cadbce; border-radius: 10px; padding: 11px; background: #fbfdfb; color: #153b29; font: inherit; box-sizing: border-box; }
+.routeActions .inlineCheck, .attachmentForm label { display: flex; grid-template-columns: none; align-items: center; gap: 8px; font-weight: 600; }
+.routeActions .inlineCheck input, .attachmentForm label input { width: auto; }
+.routeActions .primaryAction { justify-content: center; }
+.routeContact { display: grid; gap: 5px; margin-top: 22px; padding-top: 18px; border-top: 1px solid #e0e9e2; color: #5b6c60; font-size: .78rem; }
+.routeContact h4 { margin: 0 0 5px; color: #1b4d31; }
+.attachmentList { display: grid; gap: 8px; }
+.attachmentList > button { display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 10px; text-align: left; border: 1px solid #dce7de; border-radius: 12px; padding: 11px; background: #fbfdfb; cursor: pointer; color: #1b4d31; }
+.attachmentList > button:hover { border-color: #75ad43; background: #f4faee; }
+.attachmentList div { display: grid; gap: 3px; }
+.attachmentList small { color: #7b897f; }
+.attachmentList b { font-size: .7rem; color: #257843; }
+.attachmentForm { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; margin-top: 14px; padding-top: 14px; border-top: 1px solid #e1eae3; font-size: .76rem; }
+.routeWorkflow .formError { margin: 10px 0; }
+.publicAttachments { display: grid; gap: 8px; margin-top: 16px; padding: 16px; border: 1px solid #dbe8dc; border-radius: 14px; background: #f7fbf5; }
+.publicAttachments > strong { color: #16482e; }
+.publicAttachments a { display: flex; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 9px; background: white; color: #216b3e; font-weight: 800; text-decoration: none; }
+.publicAttachments a:hover { background: #eef7e9; }
+.publicAttachments small { color: #738078; font-weight: 600; }
+@media (max-width: 900px) {
+  .routeDetailBackdrop { padding: 0; }
+  .routeDetail { width: 100%; min-height: 100vh; border-radius: 0; }
+  .routeDetailGrid { grid-template-columns: 1fr; padding: 18px; }
+  .routeSummary { grid-template-columns: 1fr 1fr; padding: 16px 18px; }
+  .routeDescription { margin: 16px 18px 0; }
+  .routeActions { position: static; }
+  .attachmentForm { grid-template-columns: 1fr; }
+}
