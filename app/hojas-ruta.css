@@ -4,7 +4,11 @@
 .routeDetailHeader span { font-size: .75rem; letter-spacing: .15em; font-weight: 900; color: #d9f3b1; }
 .routeDetailHeader h2 { margin: 6px 0; font-size: 1.55rem; }
 .routeDetailHeader p { margin: 0; color: #e8f4eb; }
-.routeDetailHeader > button { border: 0; background: rgba(255,255,255,.15); color: white; width: 40px; height: 40px; border-radius: 50%; font-size: 1.6rem; cursor: pointer; }
+.routeDetailHeaderActions { display: flex; align-items: center; gap: 9px; }
+.routeDetailHeaderActions > button { border: 0; color: white; cursor: pointer; }
+.routeDetailHeaderActions > button:last-child { background: rgba(255,255,255,.15); width: 40px; height: 40px; border-radius: 50%; font-size: 1.6rem; }
+.routePrintButton { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; border: 1px solid rgba(255,255,255,.32) !important; border-radius: 11px; background: rgba(255,255,255,.14); font-size: .74rem; font-weight: 850; }
+.routePrintButton:disabled { opacity: .62; cursor: wait; }
 .routeSummary { display: grid; grid-template-columns: auto repeat(3, 1fr); gap: 14px; align-items: center; padding: 18px 30px; background: white; border-bottom: 1px solid #e3ebe4; }
 .routeSummary > span { justify-self: start; padding: 8px 13px; border-radius: 999px; font-size: .75rem; font-weight: 900; background: #edf7e9; color: #176539; }
 .routeSummary div { display: flex; flex-direction: column; gap: 3px; }
@@ -45,6 +49,127 @@
 .publicAttachments a { display: flex; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 9px; background: white; color: #216b3e; font-weight: 800; text-decoration: none; }
 .publicAttachments a:hover { background: #eef7e9; }
 .publicAttachments small { color: #738078; font-weight: 600; }
+
+.routeModuleEyebrow { display: block; margin-bottom: 7px; color: #2f8b4c; font-size: .68rem; font-weight: 900; letter-spacing: .14em; }
+.sideSubNav { display: grid; gap: 3px; margin: -1px 0 7px 28px; padding-left: 9px; border-left: 1px solid rgba(197,225,190,.22); }
+.sideNav .sideSubNav > button { display: grid; grid-template-columns: 20px 1fr auto; min-height: 31px; padding: 6px 8px; color: #a9c8b3; border-radius: 8px; font-size: .65rem; }
+.sideNav .sideSubNav > button.active { color: #fff; background: rgba(255,255,255,.11); box-shadow: none; }
+.sideNav .sideSubNav > button > span:first-child { color: #d8bf45; font-size: .78rem; }
+.sideNav .sideSubNav > button b { min-width: 18px; height: 18px; color: #174a30; background: #e4c43c; font-size: .55rem; }
+.routeInboxTabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 13px; }
+.routeInboxTabs > button { display: grid; grid-template-columns: 43px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 79px; padding: 13px 15px; border: 1px solid #dce7de; border-radius: 16px; color: #335344; background: rgba(255,255,255,.84); text-align: left; cursor: pointer; box-shadow: 0 8px 28px rgba(22,74,43,.04); transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease; }
+.routeInboxTabs > button:hover { transform: translateY(-1px); border-color: #91bb73; box-shadow: 0 12px 28px rgba(22,74,43,.09); }
+.routeInboxTabs > button.selected { color: #fff; border-color: #1d7342; background: linear-gradient(125deg, #104c30, #227a45 68%, #78a932); box-shadow: 0 13px 30px rgba(18,83,47,.2); }
+.routeTabIcon { display: grid; place-items: center; width: 43px; height: 43px; border-radius: 13px; color: #237544; background: #eef7e9; font-size: 1.35rem; font-weight: 800; }
+.routeInboxTabs > button.selected .routeTabIcon { color: #fff; background: rgba(255,255,255,.14); }
+.routeInboxTabs > button > span:nth-child(2) { display: grid; gap: 4px; min-width: 0; }
+.routeInboxTabs strong { font-size: .88rem; }
+.routeInboxTabs small { color: #788a7e; font-size: .66rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.routeInboxTabs > button.selected small { color: #d9ecdd; }
+.routeInboxTabs > button > b { display: grid; place-items: center; min-width: 29px; height: 29px; padding: 0 6px; border-radius: 999px; color: #1e6d40; background: #edf7e9; font-size: .72rem; }
+.routeInboxTabs > button.selected > b { color: #16462f; background: #e7c442; }
+.routeSearchBar { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; margin-bottom: 12px; padding: 0 14px; min-height: 48px; border: 1px solid #dfe8e1; border-radius: 13px; background: #fff; color: #63806d; }
+.routeSearchBar > span { font-size: 1.25rem; }
+.routeSearchBar input { width: 100%; border: 0; outline: 0; color: #183c29; background: transparent; font: inherit; font-size: .79rem; }
+.routeSearchBar button { border: 0; border-radius: 8px; padding: 7px 10px; color: #247343; background: #eef7ea; font-size: .68rem; font-weight: 800; cursor: pointer; }
+.routeInboxPanel { overflow: hidden; }
+.routeInboxList { display: grid; }
+.routeInboxRow { display: grid; grid-template-columns: 46px minmax(210px, 1.35fr) minmax(170px, .8fr) 150px auto; align-items: center; gap: 14px; min-height: 88px; padding: 13px 17px; border-bottom: 1px solid #e9efea; }
+.routeInboxRow:last-child { border-bottom: 0; }
+.routeInboxRow:hover { background: linear-gradient(90deg, #f8fcf6, #fff); }
+.routeStateGlyph { display: grid; place-items: center; width: 43px; height: 43px; border-radius: 13px; font-size: 1.25rem; font-weight: 900; }
+.routeStateGlyph.incoming { color: #16643a; background: #e7f5e8; }
+.routeStateGlyph.outgoing { color: #7d6210; background: #fff6cf; }
+.routeStateGlyph.history { color: #64766a; background: #edf1ee; }
+.routeInboxIdentity { display: grid; gap: 5px; min-width: 0; }
+.routeInboxIdentity > div { display: flex; align-items: center; gap: 7px; }
+.routeInboxIdentity > div > b { color: #267947; font-size: .68rem; letter-spacing: .04em; }
+.routeInboxIdentity > strong { color: #183a29; font-size: .8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.routeInboxIdentity > small { color: #7c8b81; font-size: .69rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.routePriority { padding: 3px 6px; border-radius: 999px; color: #66786d; background: #edf2ee; font-size: .54rem; font-weight: 900; text-transform: uppercase; }
+.routePriority.alta, .routePriority.urgente { color: #945915; background: #fff0cc; }
+.routePriority.urgente { color: #a32e35; background: #ffebeb; }
+.routeInboxUnit { display: grid; gap: 5px; min-width: 0; }
+.routeInboxUnit small { color: #8b998f; font-size: .56rem; font-weight: 900; letter-spacing: .09em; }
+.routeInboxUnit strong { color: #335143; font-size: .7rem; line-height: 1.35; }
+.routeInboxStatus { display: grid; justify-items: start; gap: 6px; }
+.routeInboxStatus > span { padding: 5px 8px; border-radius: 999px; font-size: .6rem; font-weight: 900; }
+.routeInboxStatus > small { color: #89968d; font-size: .62rem; }
+.routeRowAction { display: flex; align-items: center; justify-content: space-between; gap: 11px; min-width: 88px; padding: 9px 10px 9px 12px; border: 1px solid #d5e4d8; border-radius: 10px; color: #1e6e40; background: #f8fcf6; font-size: .66rem; font-weight: 900; cursor: pointer; }
+.routeRowAction:hover { color: #fff; border-color: #277b46; background: #277b46; }
+.routeRowAction span { font-size: 1.05rem; }
+.routeEmpty { display: grid; justify-items: center; padding: 60px 20px; color: #6d8073; text-align: center; }
+.routeEmpty > span { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; color: #2e844c; background: #eaf6e7; font-size: 1.25rem; }
+.routeEmpty h3 { margin: 13px 0 5px; color: #234b34; font-size: 1rem; }
+.routeEmpty p { margin: 0; font-size: .76rem; }
+.formSuccess { margin: 16px 30px 0; padding: 12px 14px; border: 1px solid #cfe7c6; border-radius: 10px; color: #1d6b3c; background: #eff9eb; font-size: .77rem; font-weight: 700; }
+.routeSectionTitle { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 17px; }
+.routeSectionTitle span, .routeActionHeading > span { color: #6ca241; font-size: .58rem; font-weight: 900; letter-spacing: .14em; }
+.routeSectionTitle h3 { margin: 3px 0 0; }
+.routeSectionTitle > b { padding: 5px 8px; border-radius: 999px; color: #4f6f5a; background: #edf3ee; font-size: .6rem; }
+.routeHandoffs { display: grid; }
+.routeHandoffs article { display: grid; grid-template-columns: 29px minmax(0, 1fr) auto; align-items: start; gap: 11px; padding: 12px 0; border-top: 1px solid #edf1ed; }
+.routeHandoffs article:first-child { border-top: 0; padding-top: 0; }
+.routeHandoffs article > span { display: grid; place-items: center; width: 27px; height: 27px; border-radius: 9px; color: #fff; background: #267b47; font-size: .66rem; font-weight: 900; }
+.routeHandoffs article > div { display: grid; gap: 4px; }
+.routeHandoffs strong { color: #284a36; font-size: .74rem; }
+.routeHandoffs strong b { color: #c59a1c; margin: 0 3px; }
+.routeHandoffs small { color: #86938a; font-size: .62rem; }
+.routeHandoffs p { margin: 2px 0 0; color: #596b60; font-size: .69rem; line-height: 1.45; }
+.routeHandoffs em { padding: 5px 7px; border-radius: 999px; color: #68796e; background: #edf1ee; font-size: .56rem; font-style: normal; font-weight: 900; white-space: nowrap; }
+.routeHandoffs em.pendiente { color: #8f6512; background: #fff3cb; }
+.routeHandoffs em.recibida { color: #1e7040; background: #e9f6e7; }
+.routeActionHeading { margin-bottom: 16px; }
+.routeActionHeading h3 { margin: 4px 0 6px; }
+.routeActionHeading p { margin: 0; color: #78877d; font-size: .7rem; line-height: 1.45; }
+.routeSubmitAction { width: 100%; justify-content: center; min-height: 43px; }
+.routeSecondaryPrint { width: 100%; margin-top: 13px; padding: 10px; border: 1px solid #d2dfd5; border-radius: 10px; color: #236c40; background: #f7fbf6; font-size: .68rem; font-weight: 850; cursor: pointer; }
+.routeSecondaryPrint:disabled { opacity: .55; cursor: wait; }
+.modalHeader p { margin: 7px 0 0; color: #7a887f; font-size: .68rem; font-weight: 500; }
+
+.routePrintSheet { display: none; }
+
+@page { size: A4 portrait; margin: 8mm; }
+
+@media print {
+  html, body { width: 210mm; min-height: 297mm; margin: 0 !important; background: #fff !important; }
+  body * { visibility: hidden !important; }
+  .routePrintSheet, .routePrintSheet * { visibility: visible !important; }
+  .routePrintSheet { position: fixed; inset: 0 auto auto 0; display: grid !important; grid-template-rows: 27mm 47mm 1fr 7mm; width: 194mm; height: 281mm; margin: 0; border: 0; color: #173025; background: #fff; box-shadow: none; overflow: hidden; font-family: Arial, Helvetica, sans-serif; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .routePrintHeader { display: grid; grid-template-columns: 47mm 1fr 30mm; align-items: center; gap: 4mm; padding: 1.5mm 2mm 2mm; border: .35mm solid #1d6740; border-top: 2.2mm solid #1b5e3a; border-radius: 2mm 2mm 0 0; box-sizing: border-box; }
+  .routePrintBrand { display: grid; align-items: center; height: 20mm; padding-right: 3mm; border-right: .25mm solid #c8d9cb; }
+  .routePrintBrand img { display: block; width: 43mm; height: 18mm; object-fit: contain; }
+  .routePrintTitle { display: grid; justify-items: center; align-content: center; text-align: center; }
+  .routePrintTitle span { color: #3d674e; font-size: 6pt; font-weight: 800; letter-spacing: .04em; }
+  .routePrintTitle h1 { margin: 1.2mm 0 .8mm; color: #154d31; font-size: 17pt; line-height: 1; letter-spacing: .05em; }
+  .routePrintTitle strong { color: #b88f15; font-family: "Courier New", monospace; font-size: 12pt; letter-spacing: .08em; }
+  .routePrintQr { display: grid; justify-items: center; align-content: center; }
+  .routePrintQr img { display: block; width: 23mm; height: 23mm; object-fit: contain; }
+  .routePrintQr > span { display: grid; place-items: center; width: 23mm; height: 23mm; border: .25mm solid #cbd7cd; }
+  .routePrintQr small { margin-top: .4mm; color: #4a6854; font-size: 4.6pt; font-weight: 900; letter-spacing: .06em; }
+  .routePrintData { display: grid; grid-template-columns: 1fr 1fr; border-right: .35mm solid #1d6740; border-bottom: .35mm solid #1d6740; border-left: .35mm solid #1d6740; box-sizing: border-box; }
+  .routePrintData > div { display: grid; grid-template-columns: 28mm 1fr; align-items: center; min-height: 7mm; padding: 1mm 2.2mm; border-right: .2mm solid #b9cbbd; border-bottom: .2mm solid #b9cbbd; box-sizing: border-box; }
+  .routePrintData > div:nth-child(even), .routePrintData > div.wide { border-right: 0; }
+  .routePrintData > div.wide { grid-column: 1 / -1; grid-template-columns: 46mm 1fr; }
+  .routePrintData > div:last-child { border-bottom: 0; }
+  .routePrintData small { color: #2d6241; font-size: 6.3pt; font-weight: 900; letter-spacing: .04em; }
+  .routePrintData strong { min-width: 0; color: #192d21; font-size: 8.2pt; line-height: 1.15; }
+  .routePrintSubject strong { font-size: 9pt; }
+  .routePrintMovements { display: grid; grid-template-rows: repeat(5, 1fr); border-right: .35mm solid #1d6740; border-left: .35mm solid #1d6740; box-sizing: border-box; }
+  .routePrintRow { display: grid; grid-template-columns: 1fr 1fr; break-inside: avoid; page-break-inside: avoid; border-bottom: .35mm solid #1d6740; min-height: 0; }
+  .routePrintReception, .routePrintDestination { display: grid; grid-template-rows: 6mm 1fr 5mm; min-height: 0; position: relative; }
+  .routePrintReception { border-right: .35mm solid #1d6740; }
+  .routePrintRow h2 { display: flex; align-items: center; justify-content: space-between; margin: 0; padding: 0 2mm; color: #174f33; background: #eef6e9; border-bottom: .2mm solid #b8cbbb; font-size: 7.2pt; letter-spacing: .08em; }
+  .routePrintRow h2 b { color: #a57f10; font-size: 6.5pt; }
+  .routePrintReception > span, .routePrintDestination > span { align-self: end; justify-self: center; margin-bottom: 1.2mm; padding-top: 1mm; min-width: 34mm; color: #66776b; border-top: .2mm dotted #809087; text-align: center; font-size: 5pt; font-weight: 800; letter-spacing: .08em; }
+  .routePrintDestination { grid-template-rows: 6mm 6mm 6mm 1fr 5mm; }
+  .routePrintDestination p { display: flex; align-items: end; gap: 2mm; margin: 0 2mm; padding: 1.3mm 0 .8mm; border-bottom: .2mm dotted #829287; color: #273d30; font-size: 6.3pt; }
+  .routePrintDestination p b { color: #214f35; font-size: 5.8pt; text-transform: uppercase; }
+  .routePrintDestination p.short i { flex: 1; }
+  .routePrintDestination p em { color: #87948b; font-size: 5.2pt; font-style: normal; }
+  .routePrintFooter { display: flex; align-items: center; justify-content: space-between; gap: 5mm; padding: 0 2mm; color: #597062; border: .35mm solid #1d6740; border-top: 0; font-size: 5.4pt; font-weight: 700; }
+}
+
 @media (max-width: 900px) {
   .routeDetailBackdrop { padding: 0; }
   .routeDetail { width: 100%; min-height: 100vh; border-radius: 0; }
@@ -53,4 +178,21 @@
   .routeDescription { margin: 16px 18px 0; }
   .routeActions { position: static; }
   .attachmentForm { grid-template-columns: 1fr; }
+  .routeInboxTabs { grid-template-columns: 1fr; }
+  .routeInboxTabs > button { min-height: 67px; }
+  .routeInboxRow { grid-template-columns: 43px minmax(0, 1fr) auto; }
+  .routeInboxUnit, .routeInboxStatus { display: none; }
+  .sideSubNav { display: none; }
+}
+
+@media (max-width: 560px) {
+  .routeDetailHeader { padding: 20px 18px; }
+  .routePrintButton { width: 40px; justify-content: center; padding: 0; font-size: 0; }
+  .routePrintButton span { font-size: 1rem; }
+  .routeInboxRow { gap: 10px; padding: 11px; }
+  .routeRowAction { min-width: 40px; width: 40px; justify-content: center; padding: 8px; font-size: 0; }
+  .routeRowAction span { font-size: 1.05rem; }
+  .routeHandoffs article { grid-template-columns: 27px 1fr; }
+  .routeHandoffs em { grid-column: 2; justify-self: start; }
+  .formSuccess { margin: 14px 18px 0; }
 }

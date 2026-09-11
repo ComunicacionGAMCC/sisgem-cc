@@ -1,13 +1,13 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { addMunicipalDays, capitalizeDateLabel, formatMunicipalDate, getMunicipalIsoDate, getMunicipalYear, parseMunicipalIsoDate } from "../lib/municipal-date";
 import { AccessGate, AccessManagement, AccessProvider, useAccess } from "./access";
 import { AgendaModule, AgendaSummary, canAccessCabinetAgenda } from "./agenda";
 import { MedicalBookingCard, MedicalModule } from "./medical";
 import { HumanResourcesModule } from "./recursos-humanos";
 import { ProcurementModule } from "./contrataciones";
-import { RouteCreateModal, RouteWorkflowPanel } from "./hojas-ruta";
+import { RouteCreateModal, RouteWorkflowPanel, type RouteFilter } from "./hojas-ruta";
 import { useMunicipalDate } from "./use-municipal-date";
 
 type InternalView = "inicio" | "hojas" | "fichas" | "accesos" | "rrhh" | "contrataciones" | "agenda" | "transparencia";
@@ -82,7 +82,7 @@ function HomeContent() {
   const [trackingError, setTrackingError] = useState("");
   const [trackingLoading, setTrackingLoading] = useState(false);
   const [routeModal, setRouteModal] = useState<"form" | "success" | null>(null);
-  const [routeFilter, setRouteFilter] = useState<"todos" | "pendientes" | "finalizados">("todos");
+  const [routeFilter, setRouteFilter] = useState<RouteFilter>("recibir");
   const [routeSearch, setRouteSearch] = useState("");
   const [routeItems, setRouteItems] = useState<RouteItem[]>([]);
   const [routeUnits, setRouteUnits] = useState<MunicipalUnit[]>([]);
@@ -90,6 +90,30 @@ function HomeContent() {
   const [routeDataLive, setRouteDataLive] = useState(false);
   const [routeRefresh, setRouteRefresh] = useState(0);
   const [createdCode, setCreatedCode] = useState("");
+
+  const consultTracking = useCallback(async (rawCode: string, signal?: AbortSignal) => {
+    const code = rawCode.trim().toUpperCase();
+    if (!code) return;
+
+    setTrackingCode(code);
+    setTrackingResult(null);
+    setTrackingError("");
+    setTrackingLoading(true);
+    try {
+      const response = await fetch(`/api/seguimiento/${encodeURIComponent(code)}`, {
+        cache: "no-store",
+        signal,
+      });
+      const data = (await response.json()) as { item?: TrackingResult; error?: string };
+      if (!response.ok || !data.item) throw new Error(data.error || "No se encontró la solicitud.");
+      setTrackingResult(data.item);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      setTrackingError(error instanceof Error ? error.message : "No se pudo consultar el seguimiento.");
+    } finally {
+      if (!signal?.aborted) setTrackingLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if ("serviceWorker" in navigator) {
@@ -104,6 +128,22 @@ function HomeContent() {
       if (accessTimer !== null) window.clearTimeout(accessTimer);
     };
   }, []);
+
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get("codigo")?.trim();
+    if (!code) return;
+
+    const controller = new AbortController();
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById("seguimiento")?.scrollIntoView({ block: "start" });
+      void consultTracking(code, controller.signal);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      controller.abort();
+    };
+  }, [consultTracking]);
 
   useEffect(() => {
     if (portal !== "internal" || !access.session || !access.hasPermission("sigem.routes.read")) return;
@@ -141,7 +181,8 @@ function HomeContent() {
   const visibleRoutes = useMemo(() => {
     const query = routeSearch.trim().toLowerCase();
     return routeItems.filter((route) => {
-      const matchesFilter = routeFilter === "todos" || (routeFilter === "finalizados" ? route.status === "Finalizado" : route.status !== "Finalizado");
+      const matchesFilter = routeFilter === "historial"
+        || (routeFilter === "recibir" ? route.state === "derivado" : ["recibido", "en_proceso", "observado"].includes(route.state ?? ""));
       const matchesSearch = !query || `${route.code} ${route.title} ${route.sender}`.toLowerCase().includes(query);
       return matchesFilter && matchesSearch;
     });
@@ -165,22 +206,7 @@ function HomeContent() {
   async function submitTracking(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const code = trackingCode.trim() || "HR-2026-00481";
-    setTrackingCode(code);
-    setTrackingResult(null);
-    setTrackingError("");
-    setTrackingLoading(true);
-    try {
-      const response = await fetch(`/api/seguimiento/${encodeURIComponent(code.toUpperCase())}`, {
-        cache: "no-store",
-      });
-      const data = (await response.json()) as { item?: TrackingResult; error?: string };
-      if (!response.ok || !data.item) throw new Error(data.error || "No se encontró la solicitud.");
-      setTrackingResult(data.item);
-    } catch (error) {
-      setTrackingError(error instanceof Error ? error.message : "No se pudo consultar el seguimiento.");
-    } finally {
-      setTrackingLoading(false);
-    }
+    await consultTracking(code);
   }
 
   if (portal === "internal") {
@@ -372,8 +398,8 @@ function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, se
   setView: (view: InternalView) => void;
   openCitizen: () => void;
   openRouteModal: () => void;
-  filter: "todos" | "pendientes" | "finalizados";
-  setFilter: (filter: "todos" | "pendientes" | "finalizados") => void;
+  filter: RouteFilter;
+  setFilter: (filter: RouteFilter) => void;
   search: string;
   setSearch: (value: string) => void;
   visibleRoutes: readonly RouteItem[];
@@ -397,10 +423,12 @@ function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, se
   const greetingName = access.context?.profile.fullName.trim().split(/\s+/)[0] || "usuario";
   const initials = access.context?.profile.fullName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "US";
   const routeAlerts = getRouteAlerts(allRoutes, today);
+  const routesToReceive = allRoutes.filter((route) => route.state === "derivado").length;
+  const routesToDerive = allRoutes.filter((route) => ["recibido", "en_proceso", "observado"].includes(route.state ?? "")).length;
 
   function openRoute(route: RouteItem) {
     setSearch(route.code);
-    setFilter("todos");
+    setFilter("historial");
     setView("hojas");
     setNotificationsOpen(false);
   }
@@ -411,7 +439,7 @@ function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, se
         <div className="sideLabel">GESTIÓN MUNICIPAL</div>
         <nav className="sideNav" aria-label="Navegación interna">
           {!pressOnly && <SideButton active={view === "inicio"} icon="⌂" label="Inicio" onClick={() => setView("inicio")} />}
-          {access.hasPermission("sigem.routes.read") && <SideButton active={view === "hojas"} icon="↗" label="Hojas de ruta" badge={String(allRoutes.length)} onClick={() => setView("hojas")} />}
+          {access.hasPermission("sigem.routes.read") && <><SideButton active={view === "hojas"} icon="↗" label="Hojas de ruta" badge={String(routesToReceive)} onClick={() => setView("hojas")} />{view === "hojas" && <div className="sideSubNav" aria-label="Submenú de hojas de ruta"><button className={filter === "recibir" ? "active" : ""} onClick={() => setFilter("recibir")}><span>↓</span> Recibir <b>{routesToReceive}</b></button><button className={filter === "derivar" ? "active" : ""} onClick={() => setFilter("derivar")}><span>→</span> Derivar <b>{routesToDerive}</b></button><button className={filter === "historial" ? "active" : ""} onClick={() => setFilter("historial")}><span>✓</span> Historial</button></div>}</>}
           {access.hasPermission("health.appointments.read") && <SideButton active={view === "fichas"} icon="✚" label="Fichas médicas" onClick={() => setView("fichas")} />}
           {canManageUsers && <SideButton active={view === "accesos"} icon="♙" label="Usuarios y accesos" onClick={() => setView("accesos")} />}
           {access.hasPermission("sigem.hr.read") && <SideButton active={view === "rrhh"} icon="♧" label="Recursos Humanos" onClick={() => setView("rrhh")} />}
@@ -423,7 +451,7 @@ function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, se
       </aside>
 
       <main className="internalMain">
-        <header className="internalHeader"><div><span className="sectionKicker">MUNICIPIO DIGITAL</span><h1>{titles[view]}</h1></div><div className="headerActions"><span className="demoPill live" title={routeDataLive ? "Datos municipales conectados" : "Acceso institucional verificado"}><i /> Acceso protegido · 2FA</span><div className="notificationMenu"><button className="iconButton" aria-label={`Notificaciones: ${routeAlerts.length} pendientes`} aria-expanded={notificationsOpen} onClick={() => setNotificationsOpen((open) => !open)}>●{routeAlerts.length > 0 && <span className="notificationCount">{routeAlerts.length > 9 ? "9+" : routeAlerts.length}</span>}</button>{notificationsOpen && <section className="notificationPanel" aria-label="Alertas de hojas de ruta"><header><div><span>ALERTAS</span><strong>Requieren atención</strong></div><button onClick={() => setNotificationsOpen(false)} aria-label="Cerrar alertas">×</button></header><div className="notificationList">{routeAlerts.length ? routeAlerts.slice(0, 6).map((alert) => <button key={alert.route.code} onClick={() => openRoute(alert.route)}><i className={alert.level} /><span><strong>{alert.label}</strong><small>{alert.route.code} · {alert.route.title}</small></span><b>›</b></button>) : <p>No tienes alertas pendientes.</p>}</div>{routeAlerts.length > 0 && <button className="notificationFooter" onClick={() => { setView("hojas"); setNotificationsOpen(false); }}>Ver toda la bandeja →</button>}</section>}</div><button className="portalLink" onClick={openCitizen}>Ver portal ciudadano</button></div></header>
+        <header className="internalHeader"><div><span className="sectionKicker">MUNICIPIO DIGITAL</span><h1>{titles[view]}</h1></div><div className="headerActions"><span className="demoPill live" title={routeDataLive ? "Datos municipales conectados" : "Acceso institucional verificado"}><i /> Acceso protegido · 2FA</span><div className="notificationMenu"><button className="iconButton" aria-label={`Notificaciones: ${routeAlerts.length} pendientes`} aria-expanded={notificationsOpen} onClick={() => setNotificationsOpen((open) => !open)}>●{routeAlerts.length > 0 && <span className="notificationCount">{routeAlerts.length > 9 ? "9+" : routeAlerts.length}</span>}</button>{notificationsOpen && <section className="notificationPanel" aria-label="Alertas de hojas de ruta"><header><div><span>ALERTAS</span><strong>Requieren atención</strong></div><button onClick={() => setNotificationsOpen(false)} aria-label="Cerrar alertas">×</button></header><div className="notificationList">{routeAlerts.length ? routeAlerts.slice(0, 6).map((alert) => <button key={alert.route.code} onClick={() => openRoute(alert.route)}><i className={alert.level} /><span><strong>{alert.label}</strong><small>{alert.route.code} · {alert.route.title}</small></span><b>›</b></button>) : <p>No tienes alertas pendientes.</p>}</div>{routeAlerts.length > 0 && <button className="notificationFooter" onClick={() => { setView("hojas"); setFilter("historial"); setNotificationsOpen(false); }}>Ver toda la bandeja →</button>}</section>}</div><button className="portalLink" onClick={openCitizen}>Ver portal ciudadano</button></div></header>
         {view === "inicio" && <Dashboard setView={setView} openRouteModal={openRouteModal} items={allRoutes} userName={greetingName} today={today} canAccessAgenda={canAccessAgenda} openRoute={openRoute} />}
         {view === "hojas" && <RoutesModule openRouteModal={openRouteModal} filter={filter} setFilter={setFilter} search={search} setSearch={setSearch} visibleRoutes={visibleRoutes} allRoutes={allRoutes} loading={routeLoading} refresh={refreshRoutes} />}
         {view === "fichas" && <MedicalModule />}
@@ -472,7 +500,7 @@ function RouteList({ items, full = false, onOpen }: { items: readonly RouteItem[
   return <div className={`inboxList ${full ? "full" : ""}`}>{items.length ? items.map((route) => <article className="inboxRow" key={route.code}><span className="docGlyph">▤</span><div className="inboxIdentity"><strong>{route.title}</strong><span>{route.sender} · <b>{route.code}</b></span></div><span className="unitPill">{route.unit}</span><div className="inboxStatus"><span className={route.tone}>{route.status}</span><small>{route.due}</small></div><button aria-label={`Abrir ${route.code}`} onClick={() => onOpen?.(route)}>›</button></article>) : <p className="emptyState">No hay hojas de ruta que requieran atención.</p>}</div>;
 }
 
-function RoutesModule({ openRouteModal, filter, setFilter, search, setSearch, visibleRoutes, allRoutes, loading, refresh }: { openRouteModal: () => void; filter: "todos" | "pendientes" | "finalizados"; setFilter: (value: "todos" | "pendientes" | "finalizados") => void; search: string; setSearch: (value: string) => void; visibleRoutes: readonly RouteItem[]; allRoutes: readonly RouteItem[]; loading: boolean; refresh: () => void }) {
+function RoutesModule({ openRouteModal, filter, setFilter, search, setSearch, visibleRoutes, allRoutes, loading, refresh }: { openRouteModal: () => void; filter: RouteFilter; setFilter: (value: RouteFilter) => void; search: string; setSearch: (value: string) => void; visibleRoutes: readonly RouteItem[]; allRoutes: readonly RouteItem[]; loading: boolean; refresh: () => void }) {
   return <RouteWorkflowPanel openRouteModal={openRouteModal} filter={filter} setFilter={setFilter} search={search} setSearch={setSearch} visibleRoutes={visibleRoutes} allRoutes={allRoutes} loading={loading} refresh={refresh} />;
 }
 

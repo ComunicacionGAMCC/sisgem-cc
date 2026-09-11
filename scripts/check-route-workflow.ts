@@ -30,7 +30,22 @@ try {
   const [row] = await db.select({ applicantId: hojasDeRuta.solicitanteId }).from(hojasDeRuta).where(eq(hojasDeRuta.id, routeId));
   applicantId = row.applicantId;
 
+  await assertRejected(
+    "derivar antes de recibir",
+    gestionarHojaRuta(routeId, { type: "derive", destinationUnitId: activeUnits[1].id, note: "Derivación prematura de validación" }, actor, null),
+    /recepción/i,
+  );
+  await assertRejected(
+    "cerrar antes de recibir",
+    gestionarHojaRuta(routeId, { type: "close", detail: "Cierre prematuro de validación", public: true }, actor, null),
+    /recepción/i,
+  );
   await gestionarHojaRuta(routeId, { type: "receive", note: "Recepción validada" }, actor, null);
+  await assertRejected(
+    "recibir dos veces",
+    gestionarHojaRuta(routeId, { type: "receive", note: "Recepción duplicada" }, actor, null),
+    /ya fue recibida|pendiente de recepción/i,
+  );
   await gestionarHojaRuta(routeId, { type: "act", title: "Informe revisado", detail: "Se revisó la documentación presentada.", public: true }, actor, null);
   await gestionarHojaRuta(routeId, { type: "deadline", dueAt: "2026-12-31", detail: "Plazo de validación" }, actor, null);
   await gestionarHojaRuta(routeId, { type: "derive", destinationUnitId: activeUnits[1].id, note: "Derivación de validación integral" }, actor, null);
@@ -64,4 +79,15 @@ try {
   if (routeId) await db.delete(hojasDeRuta).where(eq(hojasDeRuta.id, routeId));
   if (applicantId) await db.delete(solicitantes).where(eq(solicitantes.id, applicantId));
   await db.delete(solicitantes).where(eq(solicitantes.nombre, sender));
+}
+
+async function assertRejected(label: string, operation: Promise<unknown>, expected: RegExp) {
+  try {
+    await operation;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!expected.test(message)) throw new Error(`${label}: mensaje inesperado: ${message}`);
+    return;
+  }
+  throw new Error(`${label}: la operación debía ser rechazada.`);
 }

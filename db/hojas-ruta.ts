@@ -427,6 +427,7 @@ export async function obtenerDetalleHojaRuta(hojaRutaId: string, unidadIds: stri
   const unitNames = new Map(unidadesMunicipales.map((unit) => [unit.id, unit.name]));
   return {
     ...hoja,
+    unit: hoja.currentUnit,
     status: estadoEtiquetas[hoja.state],
     tone: tonoEstado(hoja.state, hoja.priority),
     due: textoVencimiento(hoja.dueAt, hoja.state),
@@ -471,14 +472,55 @@ export async function gestionarHojaRuta(
   let eventDetail = "";
   let eventPublic = false;
   let eventUnitId = hoja.currentUnitId;
+  const [derivacionAbierta] = await db
+    .select({
+      id: derivaciones.id,
+      state: derivaciones.estado,
+      destinationUnitId: derivaciones.unidadDestinoId,
+    })
+    .from(derivaciones)
+    .where(and(
+      eq(derivaciones.hojaRutaId, hojaRutaId),
+      inArray(derivaciones.estado, ["pendiente", "recibida"]),
+    ))
+    .orderBy(desc(derivaciones.derivadoAt))
+    .limit(1);
+
+  const estadosPosterioresARecepcion = new Set(["recibido", "en_proceso", "observado"]);
+
+  function exigirRecepcionPrevia(operacion: "derivar" | "finalizar") {
+    if (hoja.state === "derivado" || derivacionAbierta?.state === "pendiente") {
+      throw new Error(`Confirma la recepción antes de ${operacion} la hoja de ruta.`);
+    }
+    if (!estadosPosterioresARecepcion.has(hoja.state)) {
+      throw new Error(`La hoja de ruta debe estar recibida o en proceso antes de ${operacion}.`);
+    }
+    if (derivacionAbierta && derivacionAbierta.destinationUnitId !== hoja.currentUnitId) {
+      throw new Error("La derivación activa no corresponde a la unidad actual.");
+    }
+  }
 
   // Neon HTTP no soporta transacciones interactivas. Las operaciones se
   // ejecutan secuencialmente y se respaldan con su registro de auditoría.
   const tx = db;
   {
     if (action.type === "receive") {
+      if (hoja.state !== "derivado") {
+        throw new Error("Esta hoja de ruta ya fue recibida o no está pendiente de recepción.");
+      }
+      if (
+        !derivacionAbierta
+        || derivacionAbierta.state !== "pendiente"
+        || derivacionAbierta.destinationUnitId !== hoja.currentUnitId
+      ) {
+        throw new Error("No existe una derivación pendiente de recepción para la unidad actual.");
+      }
       await tx.update(derivaciones).set({ estado: "recibida", recibidoAt: new Date() })
-        .where(and(eq(derivaciones.hojaRutaId, hojaRutaId), eq(derivaciones.estado, "pendiente")));
+        .where(and(
+          eq(derivaciones.hojaRutaId, hojaRutaId),
+          eq(derivaciones.unidadDestinoId, hoja.currentUnitId),
+          eq(derivaciones.estado, "pendiente"),
+        ));
       await tx.update(hojasDeRuta).set({ estado: "en_proceso", updatedAt: new Date() })
         .where(eq(hojasDeRuta.id, hojaRutaId));
       eventState = "en_proceso";
@@ -486,6 +528,7 @@ export async function gestionarHojaRuta(
       eventDetail = action.note?.trim() || "La unidad responsable confirmó la recepción de la documentación.";
       eventPublic = true;
     } else if (action.type === "derive") {
+      exigirRecepcionPrevia("derivar");
       const [destination] = await tx.select({ id: unidades.id, name: unidades.nombre })
         .from(unidades).where(and(eq(unidades.id, action.destinationUnitId), eq(unidades.activa, true))).limit(1);
       if (!destination) throw new Error("La unidad de destino no existe o está inactiva.");
@@ -532,6 +575,7 @@ export async function gestionarHojaRuta(
       eventDetail = action.detail?.trim() || `Nueva fecha límite: ${action.dueAt}.`;
       eventPublic = false;
     } else if (action.type === "close") {
+      exigirRecepcionPrevia("finalizar");
       const now = new Date();
       await tx.update(derivaciones).set({ estado: "atendida" })
         .where(and(eq(derivaciones.hojaRutaId, hojaRutaId), inArray(derivaciones.estado, ["pendiente", "recibida"])));
