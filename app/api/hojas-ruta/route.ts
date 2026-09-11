@@ -5,7 +5,6 @@ import {
   type FiltroHojas,
   type NuevaHojaRuta,
 } from "../../../db/hojas-ruta";
-import { listarUnidadesActivas } from "../../../db/unidades";
 import {
   AccessDeniedError,
   authorizeRequest,
@@ -22,15 +21,12 @@ export async function GET(request: NextRequest) {
     const filtro: FiltroHojas = ["todos", "pendientes", "finalizados"].includes(filtroParam)
       ? (filtroParam as FiltroHojas)
       : "todos";
-    const [items, units] = await Promise.all([
-      listarHojasDeRuta({
-        buscar,
-        filtro,
-        unidadIds: scopedMunicipalUnitIds(context),
-      }),
-      listarUnidadesActivas(),
-    ]);
-    return NextResponse.json({ items, units });
+    const items = await listarHojasDeRuta({
+      buscar,
+      filtro,
+      unidadIds: scopedMunicipalUnitIds(context),
+    });
+    return NextResponse.json({ items });
   } catch (error) {
     if (error instanceof AccessDeniedError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
@@ -44,28 +40,24 @@ export async function POST(request: NextRequest) {
   try {
     const { context } = await authorizeRequest(request, "sigem.routes.create");
     const body = (await request.json()) as Partial<NuevaHojaRuta>;
-    if (!body.remitente?.trim() || !body.asunto?.trim() || !body.unidadCodigo?.trim()) {
+    if (!body.remitente?.trim() || !body.consignatario?.trim() || !body.asunto?.trim()) {
       return NextResponse.json(
-        { error: "Remitente, asunto y unidad de destino son obligatorios." },
+        { error: "Remitente, consignatario y asunto son obligatorios." },
         { status: 400 },
       );
     }
 
-    const scopedUnits = scopedMunicipalUnitIds(context);
     const item = await crearHojaDeRuta({
       remitente: body.remitente,
+      consignatario: body.consignatario,
       asunto: body.asunto,
-      descripcion: body.descripcion,
       tipo: body.tipo,
       prioridad: body.prioridad,
-      unidadCodigo: body.unidadCodigo,
-      documento: body.documento,
       telefono: body.telefono,
       email: body.email,
     }, {
       userId: context.profile.id,
       name: context.profile.fullName,
-      unitId: scopedUnits?.length === 1 ? scopedUnits[0] : null,
     });
 
     return NextResponse.json({ item }, { status: 201 });

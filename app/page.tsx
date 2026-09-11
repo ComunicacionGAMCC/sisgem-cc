@@ -38,8 +38,6 @@ type RouteItem = {
   dueAt?: string | null;
 };
 
-type MunicipalUnit = { id: string; code: string; name: string };
-
 type TrackingResult = {
   code: string;
   title: string;
@@ -85,7 +83,6 @@ function HomeContent() {
   const [routeFilter, setRouteFilter] = useState<RouteFilter>("recibir");
   const [routeSearch, setRouteSearch] = useState("");
   const [routeItems, setRouteItems] = useState<RouteItem[]>([]);
-  const [routeUnits, setRouteUnits] = useState<MunicipalUnit[]>([]);
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeDataLive, setRouteDataLive] = useState(false);
   const [routeRefresh, setRouteRefresh] = useState(0);
@@ -158,14 +155,12 @@ function HomeContent() {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
         if (!response.ok) throw new Error("No se pudo consultar la base de datos.");
-        const data = (await response.json()) as { items: RouteItem[]; units?: MunicipalUnit[] };
+        const data = (await response.json()) as { items: RouteItem[] };
         setRouteItems(data.items);
-        setRouteUnits(data.units ?? []);
         setRouteDataLive(true);
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
         setRouteItems([]);
-        setRouteUnits([]);
         setRouteDataLive(false);
       } finally {
         setRouteLoading(false);
@@ -245,10 +240,10 @@ function HomeContent() {
         createdCode={createdCode}
         routeCreated={(code) => {
           setCreatedCode(code);
+          setRouteFilter("derivar");
           setRouteModal("success");
           setRouteRefresh((value) => value + 1);
         }}
-        routeUnits={routeUnits}
         refreshRoutes={() => setRouteRefresh((value) => value + 1)}
         today={municipalDate}
       />
@@ -393,7 +388,7 @@ function getRouteAlerts(items: readonly RouteItem[], today: Date | null): RouteA
     });
 }
 
-function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, setFilter, search, setSearch, visibleRoutes, allRoutes, routeLoading, routeDataLive, routeModal, setRouteModal, createdCode, routeCreated, routeUnits, refreshRoutes, today }: {
+function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, setFilter, search, setSearch, visibleRoutes, allRoutes, routeLoading, routeDataLive, routeModal, setRouteModal, createdCode, routeCreated, refreshRoutes, today }: {
   view: InternalView;
   setView: (view: InternalView) => void;
   openCitizen: () => void;
@@ -410,7 +405,6 @@ function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, se
   setRouteModal: (value: "form" | "success" | null) => void;
   createdCode: string;
   routeCreated: (code: string) => void;
-  routeUnits: MunicipalUnit[];
   refreshRoutes: () => void;
   today: Date | null;
 }) {
@@ -461,7 +455,7 @@ function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, se
         {view === "agenda" && <AgendaModule today={today} />}
         {view === "transparencia" && <TransparencyModule today={today} />}
       </main>
-      {routeModal && <RouteCreateModal mode={routeModal} close={() => setRouteModal(null)} succeed={routeCreated} createdCode={createdCode} units={routeUnits} />}
+      {routeModal && <RouteCreateModal mode={routeModal} close={() => setRouteModal(null)} succeed={routeCreated} createdCode={createdCode} />}
     </div>
   );
 }
@@ -508,48 +502,4 @@ function TransparencyModule({ today }: { today: Date | null }) {
   const year = today?.getUTCFullYear() ?? getMunicipalYear();
   const dateLabel = today ? formatMunicipalDate(today, { day: "numeric", month: "long" }) : "fecha actual";
   return <section className="moduleView"><div className="moduleTitle"><div><h2>Transparencia municipal</h2><p>Información pública preparada para la ciudadanía</p></div><button className="primaryAction">Publicar actualización</button></div><section className="transparencyHero"><div><span>EJECUCIÓN PRESUPUESTARIA {year}</span><strong>62,8%</strong><p>Información demostrativa pendiente de conexión con la fuente oficial.</p></div><div className="donut"><span>63<small>%</small></span></div></section><div className="statGrid"><StatCard color="blue" label="Presupuesto vigente" value="Bs 84,2 M" note={`Gestión ${year}`} /><StatCard color="green" label="Ejecutado" value="Bs 52,9 M" note={`Al ${dateLabel}`} /><StatCard color="orange" label="Proyectos activos" value="38" note="12 con avance público" /><StatCard color="violet" label="Procesos publicados" value="117" note="Sincronización pendiente" /></div></section>;
-}
-
-// Conservado temporalmente para compatibilidad visual con pruebas históricas.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function RouteModal({ mode, close, succeed, createdCode, units }: { mode: "form" | "success"; close: () => void; succeed: (code: string) => void; createdCode: string; units: MunicipalUnit[] }) {
-  void units;
-  const access = useAccess();
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
-
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setSubmitting(true);
-    setError("");
-    const form = new FormData(event.currentTarget);
-    try {
-      const response = await fetch("/api/hojas-ruta", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${access.session?.access_token ?? ""}`,
-        },
-        body: JSON.stringify({
-          remitente: form.get("remitente"),
-          asunto: form.get("asunto"),
-          descripcion: form.get("descripcion"),
-          tipo: form.get("tipo"),
-          prioridad: form.get("prioridad"),
-          unidadCodigo: form.get("unidadCodigo"),
-          documento: form.get("documento"),
-          telefono: form.get("telefono"),
-        }),
-      });
-      const data = (await response.json()) as { item?: { code: string }; error?: string };
-      if (!response.ok || !data.item) throw new Error(data.error || "No se pudo registrar la hoja de ruta.");
-      succeed(data.item.code);
-    } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "No se pudo registrar la hoja de ruta.");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return <div className="modalBackdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) close(); }}>{mode === "success" ? <section className="routeModal successModal" role="dialog" aria-modal="true" aria-labelledby="success-title"><div className="successMark">✓</div><h2 id="success-title">Hoja de ruta registrada</h2><p>El registro fue creado correctamente con el código <strong>{createdCode}</strong> y derivado a la unidad seleccionada.</p><button className="primaryAction" onClick={close}>Volver al panel</button></section> : <form className="routeModal" onSubmit={submit} role="dialog" aria-modal="true" aria-labelledby="route-title"><header className="modalHeader"><div><span>NUEVO REGISTRO</span><h2 id="route-title">Crear hoja de ruta</h2></div><button type="button" onClick={close} aria-label="Cerrar">×</button></header><label>Remitente<input name="remitente" required maxLength={220} placeholder="Nombre de la persona o institución" /></label><div className="formGrid"><label>Documento<input name="documento" maxLength={80} placeholder="CI, NIT o referencia" /></label><label>Teléfono<input name="telefono" maxLength={40} placeholder="Número de contacto" /></label></div><label>Asunto<input name="asunto" required maxLength={300} placeholder="Resumen de la solicitud" /></label><label>Descripción<textarea name="descripcion" rows={3} placeholder="Describe brevemente la solicitud" /></label><div className="formGrid"><label>Tipo<select name="tipo" defaultValue="solicitud_externa"><option value="solicitud_externa">Solicitud externa</option><option value="comunicacion_interna">Comunicación interna</option><option value="solicitud_audiencia">Solicitud de audiencia</option></select></label><label>Prioridad<select name="prioridad" defaultValue="normal"><option value="baja">Baja</option><option value="normal">Normal</option><option value="alta">Alta</option><option value="urgente">Urgente</option></select></label></div><label>Unidad de destino<select name="unidadCodigo" defaultValue="COM"><option value="COM">Unidad de Comunicación</option><option value="OBR">Obras Públicas</option><option value="CAT">Catastro</option><option value="DH">Desarrollo Humano</option><option value="DAP">Desarrollo Agropecuario</option></select></label>{error && <p className="formError" role="alert">{error}</p>}<div className="modalActions"><button type="button" onClick={close}>Cancelar</button><button className="primaryAction" type="submit" disabled={submitting}>{submitting ? "Registrando…" : "Registrar y derivar →"}</button></div></form>}</div>;
 }

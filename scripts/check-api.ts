@@ -32,11 +32,9 @@ try {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       remitente: "Validación HTTP SIGEM",
-      documento: `HTTP-${Date.now()}`,
+      consignatario: "Alcalde Municipal",
       asunto: "Prueba temporal de la API de Hojas de Ruta",
-      descripcion: "Este registro será eliminado automáticamente al finalizar la prueba.",
       prioridad: "alta",
-      unidadCodigo: "COM",
       tipo: "solicitud_externa",
     }),
   });

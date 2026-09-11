@@ -9,7 +9,7 @@
 .routeDetailHeaderActions > button:last-child { background: rgba(255,255,255,.15); width: 40px; height: 40px; border-radius: 50%; font-size: 1.6rem; }
 .routePrintButton { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; border: 1px solid rgba(255,255,255,.32) !important; border-radius: 11px; background: rgba(255,255,255,.14); font-size: .74rem; font-weight: 850; }
 .routePrintButton:disabled { opacity: .62; cursor: wait; }
-.routeSummary { display: grid; grid-template-columns: auto repeat(3, 1fr); gap: 14px; align-items: center; padding: 18px 30px; background: white; border-bottom: 1px solid #e3ebe4; }
+.routeSummary { display: grid; grid-template-columns: auto repeat(4, minmax(0, 1fr)); gap: 14px; align-items: center; padding: 18px 30px; background: white; border-bottom: 1px solid #e3ebe4; }
 .routeSummary > span { justify-self: start; padding: 8px 13px; border-radius: 999px; font-size: .75rem; font-weight: 900; background: #edf7e9; color: #176539; }
 .routeSummary div { display: flex; flex-direction: column; gap: 3px; }
 .routeSummary small { color: #75827a; }
@@ -126,47 +126,62 @@
 .routeSecondaryPrint { width: 100%; margin-top: 13px; padding: 10px; border: 1px solid #d2dfd5; border-radius: 10px; color: #236c40; background: #f7fbf6; font-size: .68rem; font-weight: 850; cursor: pointer; }
 .routeSecondaryPrint:disabled { opacity: .55; cursor: wait; }
 .modalHeader p { margin: 7px 0 0; color: #7a887f; font-size: .68rem; font-weight: 500; }
+.fieldHelp { color: #7a887f; font-size: .66rem; font-weight: 500; line-height: 1.45; }
+.routeRegistrationNote { margin: 0 0 15px; padding: 12px 14px; border: 1px solid #d8e7d6; border-left: 4px solid #d3ae24; border-radius: 11px; color: #496052; background: #f6faf3; font-size: .72rem; line-height: 1.55; }
+.routeRegistrationNote b, .routeRegistrationNote strong { color: #1b653b; }
 
 .routePrintSheet { display: none; }
 
-@page { size: A4 portrait; margin: 8mm; }
+@page { size: letter portrait; margin: 6.35mm; }
 
 @media print {
-  html, body { width: 210mm; min-height: 297mm; margin: 0 !important; background: #fff !important; }
+  html, body { width: 215.9mm; height: 279.4mm; margin: 0 !important; background: #fff !important; overflow: hidden !important; }
   body * { visibility: hidden !important; }
   .routePrintSheet, .routePrintSheet * { visibility: visible !important; }
-  .routePrintSheet { position: fixed; inset: 0 auto auto 0; display: grid !important; grid-template-rows: 27mm 47mm 1fr 7mm; width: 194mm; height: 281mm; margin: 0; border: 0; color: #173025; background: #fff; box-shadow: none; overflow: hidden; font-family: Arial, Helvetica, sans-serif; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-  .routePrintHeader { display: grid; grid-template-columns: 47mm 1fr 30mm; align-items: center; gap: 4mm; padding: 1.5mm 2mm 2mm; border: .35mm solid #1d6740; border-top: 2.2mm solid #1b5e3a; border-radius: 2mm 2mm 0 0; box-sizing: border-box; }
-  .routePrintBrand { display: grid; align-items: center; height: 20mm; padding-right: 3mm; border-right: .25mm solid #c8d9cb; }
-  .routePrintBrand img { display: block; width: 43mm; height: 18mm; object-fit: contain; }
+  .routePrintSheet, .routePrintSheet * { box-sizing: border-box; }
+  .routePrintSheet { position: fixed; inset: 0 auto auto 0; display: grid !important; grid-template-rows: 25mm 30mm 206mm 5.7mm; width: 203.2mm; height: 266.7mm; margin: 0; border: 0; color: #173025; background: #fff; box-shadow: none; overflow: hidden; font-family: Arial, Helvetica, sans-serif; line-height: 1; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .routePrintHeader { display: grid; grid-template-columns: 44mm 1fr 28mm; align-items: center; gap: 2.5mm; padding: 1mm 2mm 1.2mm; border: .35mm solid #1d6740; border-top: 1.6mm solid #1b5e3a; border-radius: 1.6mm 1.6mm 0 0; }
+  .routePrintBrand { display: grid; align-items: center; height: 18mm; padding-right: 2mm; border-right: .25mm solid #c8d9cb; }
+  .routePrintBrand img { display: block; width: 40mm; height: 16mm; object-fit: contain; }
   .routePrintTitle { display: grid; justify-items: center; align-content: center; text-align: center; }
-  .routePrintTitle span { color: #3d674e; font-size: 6pt; font-weight: 800; letter-spacing: .04em; }
-  .routePrintTitle h1 { margin: 1.2mm 0 .8mm; color: #154d31; font-size: 17pt; line-height: 1; letter-spacing: .05em; }
-  .routePrintTitle strong { color: #b88f15; font-family: "Courier New", monospace; font-size: 12pt; letter-spacing: .08em; }
+  .routePrintTitle span { color: #3d674e; font-size: 5.6pt; font-weight: 800; letter-spacing: .035em; }
+  .routePrintTitle h1 { margin: .9mm 0 .6mm; color: #154d31; font-size: 16pt; line-height: .95; letter-spacing: .05em; }
+  .routePrintTitle strong { color: #b88f15; font-family: "Courier New", monospace; font-size: 11pt; letter-spacing: .07em; }
   .routePrintQr { display: grid; justify-items: center; align-content: center; }
-  .routePrintQr img { display: block; width: 23mm; height: 23mm; object-fit: contain; }
-  .routePrintQr > span { display: grid; place-items: center; width: 23mm; height: 23mm; border: .25mm solid #cbd7cd; }
-  .routePrintQr small { margin-top: .4mm; color: #4a6854; font-size: 4.6pt; font-weight: 900; letter-spacing: .06em; }
-  .routePrintData { display: grid; grid-template-columns: 1fr 1fr; border-right: .35mm solid #1d6740; border-bottom: .35mm solid #1d6740; border-left: .35mm solid #1d6740; box-sizing: border-box; }
-  .routePrintData > div { display: grid; grid-template-columns: 28mm 1fr; align-items: center; min-height: 7mm; padding: 1mm 2.2mm; border-right: .2mm solid #b9cbbd; border-bottom: .2mm solid #b9cbbd; box-sizing: border-box; }
-  .routePrintData > div:nth-child(even), .routePrintData > div.wide { border-right: 0; }
-  .routePrintData > div.wide { grid-column: 1 / -1; grid-template-columns: 46mm 1fr; }
-  .routePrintData > div:last-child { border-bottom: 0; }
-  .routePrintData small { color: #2d6241; font-size: 6.3pt; font-weight: 900; letter-spacing: .04em; }
-  .routePrintData strong { min-width: 0; color: #192d21; font-size: 8.2pt; line-height: 1.15; }
-  .routePrintSubject strong { font-size: 9pt; }
-  .routePrintMovements { display: grid; grid-template-rows: repeat(5, 1fr); border-right: .35mm solid #1d6740; border-left: .35mm solid #1d6740; box-sizing: border-box; }
-  .routePrintRow { display: grid; grid-template-columns: 1fr 1fr; break-inside: avoid; page-break-inside: avoid; border-bottom: .35mm solid #1d6740; min-height: 0; }
-  .routePrintReception, .routePrintDestination { display: grid; grid-template-rows: 6mm 1fr 5mm; min-height: 0; position: relative; }
+  .routePrintQr img { display: block; width: 20mm; height: 20mm; object-fit: contain; }
+  .routePrintQr > span { display: grid; place-items: center; width: 20mm; height: 20mm; border: .25mm solid #cbd7cd; }
+  .routePrintQr small { margin-top: .25mm; color: #4a6854; font-size: 4.2pt; font-weight: 900; letter-spacing: .05em; }
+  .routePrintData { display: grid; grid-template-columns: 38% 27% 35%; grid-template-rows: 7mm 7mm 7mm 9mm; border-right: .35mm solid #1d6740; border-bottom: .35mm solid #1d6740; border-left: .35mm solid #1d6740; }
+  .routePrintData > div { display: grid; grid-template-columns: max-content minmax(0, 1fr); align-items: center; gap: 2.2mm; min-height: 0; padding: .6mm 1.8mm; border-right: .2mm solid #b9cbbd; border-bottom: .2mm solid #b9cbbd; overflow: hidden; }
+  .routePrintReceivedAt { grid-column: 1; grid-row: 1; }
+  .routePrintReceiver { grid-column: 2 / -1; grid-row: 1; border-right: 0 !important; }
+  .routePrintConsignee { grid-column: 1 / -1; grid-row: 2; border-right: 0 !important; }
+  .routePrintSender { grid-column: 1 / 3; grid-row: 3; }
+  .routePrintContact { grid-column: 3; grid-row: 3; border-right: 0 !important; }
+  .routePrintSubject { grid-column: 1 / -1; grid-row: 4; border-right: 0 !important; border-bottom: 0 !important; }
+  .routePrintData small { color: #2d6241; font-size: 5.7pt; font-weight: 900; letter-spacing: .035em; white-space: nowrap; }
+  .routePrintData strong { min-width: 0; color: #192d21; font-size: 7.8pt; line-height: 1.05; overflow-wrap: anywhere; }
+  .routePrintSubject strong { font-size: 8.5pt; }
+  .routePrintMovements { display: grid; grid-template-rows: repeat(6, minmax(0, 1fr)); min-height: 0; border-right: .35mm solid #1d6740; border-left: .35mm solid #1d6740; }
+  .routePrintRow { display: grid; grid-template-columns: 40% 60%; min-height: 0; break-inside: avoid; page-break-inside: avoid; border-bottom: .35mm solid #1d6740; }
+  .routePrintReception, .routePrintDestination { min-height: 0; position: relative; }
+  .routePrintReception { display: grid; grid-template-rows: 5.2mm 1fr 4.8mm; }
   .routePrintReception { border-right: .35mm solid #1d6740; }
-  .routePrintRow h2 { display: flex; align-items: center; justify-content: space-between; margin: 0; padding: 0 2mm; color: #174f33; background: #eef6e9; border-bottom: .2mm solid #b8cbbb; font-size: 7.2pt; letter-spacing: .08em; }
-  .routePrintRow h2 b { color: #a57f10; font-size: 6.5pt; }
-  .routePrintReception > span, .routePrintDestination > span { align-self: end; justify-self: center; margin-bottom: 1.2mm; padding-top: 1mm; min-width: 34mm; color: #66776b; border-top: .2mm dotted #809087; text-align: center; font-size: 5pt; font-weight: 800; letter-spacing: .08em; }
-  .routePrintDestination { grid-template-rows: 6mm 6mm 6mm 1fr 5mm; }
-  .routePrintDestination p { display: flex; align-items: end; gap: 2mm; margin: 0 2mm; padding: 1.3mm 0 .8mm; border-bottom: .2mm dotted #829287; color: #273d30; font-size: 6.3pt; }
-  .routePrintDestination p b { color: #214f35; font-size: 5.8pt; text-transform: uppercase; }
-  .routePrintDestination p.short i { flex: 1; }
-  .routePrintDestination p em { color: #87948b; font-size: 5.2pt; font-style: normal; }
+  .routePrintDestination { display: grid; grid-template-rows: 5.2mm 11.6mm 6mm 1fr; }
+  .routePrintRow h2 { display: flex; align-items: center; justify-content: space-between; margin: 0; padding: 0 2mm; color: #174f33; background: #eef6e9; border-bottom: .2mm solid #b8cbbb; font-size: 6.8pt; line-height: 1; letter-spacing: .075em; }
+  .routePrintDestination h2 { display: grid; grid-template-columns: auto minmax(18mm, 1fr) auto; gap: 2mm; }
+  .routePrintDestination h2 i { height: 2.5mm; border-bottom: .2mm dotted #6f8275; }
+  .routePrintRow h2 b { color: #a57f10; font-size: 6.1pt; }
+  .routePrintReception > span, .routePrintDestination > span { align-self: end; justify-self: center; margin-bottom: 1mm; padding-top: .8mm; min-width: 34mm; color: #66776b; border-top: .2mm dotted #809087; text-align: center; font-size: 4.8pt; font-weight: 800; letter-spacing: .075em; }
+  .routePrintInstruction { display: grid; grid-template-columns: auto 1fr; align-content: start; gap: 2mm; padding: 1.2mm 2mm .8mm; border-bottom: .2mm dotted #829287; }
+  .routePrintInstruction b { color: #214f35; font-size: 5.7pt; }
+  .routePrintInstruction small { color: #87948b; font-size: 4.8pt; text-align: right; }
+  .routePrintDateTime { display: grid; grid-template-columns: 58% 42%; align-items: stretch; padding: 0 2mm; border-bottom: .2mm dotted #829287; }
+  .routePrintDateTime p { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 1.5mm; margin: 0; color: #273d30; font-size: 5.7pt; }
+  .routePrintDateTime p:first-child { padding-right: 2.5mm; border-right: .2mm solid #c4d0c7; }
+  .routePrintDateTime p:last-child { padding-left: 2.5mm; }
+  .routePrintDateTime b { color: #214f35; font-size: 5.4pt; }
+  .routePrintDateTime i { height: 2.6mm; border-bottom: .2mm dotted #829287; }
   .routePrintFooter { display: flex; align-items: center; justify-content: space-between; gap: 5mm; padding: 0 2mm; color: #597062; border: .35mm solid #1d6740; border-top: 0; font-size: 5.4pt; font-weight: 700; }
 }
 

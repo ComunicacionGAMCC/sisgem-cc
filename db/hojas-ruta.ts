@@ -16,12 +16,10 @@ export type FiltroHojas = "todos" | "pendientes" | "finalizados";
 
 export type NuevaHojaRuta = {
   remitente: string;
+  consignatario: string;
   asunto: string;
-  descripcion?: string;
   tipo?: string;
   prioridad?: "baja" | "normal" | "alta" | "urgente";
-  unidadCodigo: string;
-  documento?: string;
   telefono?: string;
   email?: string;
 };
@@ -29,7 +27,6 @@ export type NuevaHojaRuta = {
 export type ActorHojaRuta = {
   userId: string;
   name: string;
-  unitId?: string | null;
 };
 
 export type AccionHojaRuta =
@@ -111,6 +108,7 @@ export async function listarHojasDeRuta({
       id: hojasDeRuta.id,
       code: hojasDeRuta.codigo,
       title: hojasDeRuta.asunto,
+      consignee: hojasDeRuta.consignatario,
       description: hojasDeRuta.descripcion,
       sender: solicitantes.nombre,
       unit: unidades.nombre,
@@ -237,36 +235,24 @@ async function siguienteCodigo() {
 
 export async function crearHojaDeRuta(input: NuevaHojaRuta, actor?: ActorHojaRuta) {
   const db = getDb();
-  const [unidad] = await db
+  const [secretariaGeneral] = await db
     .select()
     .from(unidades)
-    .where(and(eq(unidades.codigo, input.unidadCodigo), eq(unidades.activa, true)))
+    .where(and(eq(unidades.codigo, "SG"), eq(unidades.activa, true)))
     .limit(1);
 
-  if (!unidad) throw new Error("La unidad de destino no existe o no está activa.");
+  if (!secretariaGeneral) {
+    throw new Error("Secretaría General no está configurada como unidad activa.");
+  }
 
   const datosSolicitante = {
     tipo: "persona" as const,
     nombre: input.remitente.trim(),
-    documento: input.documento?.trim() || null,
+    documento: null,
     telefono: input.telefono?.trim() || null,
     email: input.email?.trim() || null,
   };
-  const [solicitante] = datosSolicitante.documento
-    ? await db
-        .insert(solicitantes)
-        .values(datosSolicitante)
-        .onConflictDoUpdate({
-          target: solicitantes.documento,
-          set: {
-            nombre: datosSolicitante.nombre,
-            telefono: datosSolicitante.telefono,
-            email: datosSolicitante.email,
-            updatedAt: new Date(),
-          },
-        })
-        .returning()
-    : await db.insert(solicitantes).values(datosSolicitante).returning();
+  const [solicitante] = await db.insert(solicitantes).values(datosSolicitante).returning();
 
   const codigo = await siguienteCodigo();
   const ahora = new Date();
@@ -278,57 +264,42 @@ export async function crearHojaDeRuta(input: NuevaHojaRuta, actor?: ActorHojaRut
     .values({
       codigo,
       tipo: input.tipo?.trim() || "solicitud_externa",
+      consignatario: input.consignatario.trim(),
       asunto: input.asunto.trim(),
-      descripcion: input.descripcion?.trim() || null,
       prioridad: input.prioridad ?? "normal",
-      estado: "derivado",
+      estado: "recibido",
       solicitanteId: solicitante.id,
-      unidadActualId: unidad.id,
+      unidadActualId: secretariaGeneral.id,
       creadoPorId: null,
       fechaLimite,
     })
     .returning();
 
-  await db.insert(derivaciones).values({
+  await db.insert(eventosSeguimiento).values({
     hojaRutaId: hoja.id,
-    unidadOrigenId: actor?.unitId ?? null,
-    unidadDestinoId: unidad.id,
-    derivadoPorId: null,
-    estado: "pendiente",
-    nota: "Derivación inicial al registrar la hoja de ruta.",
+    estado: "recibido",
+    titulo: "Solicitud registrada",
+    descripcion: "Secretaría General registró y recibió la solicitud. Queda pendiente de revisión para su primera derivación.",
+    unidadId: secretariaGeneral.id,
+    funcionarioId: null,
+    actorUsuarioId: actor?.userId ?? null,
+    actorNombre: actor?.name ?? null,
+    publico: true,
   });
-
-  await db.insert(eventosSeguimiento).values([
-    {
-      hojaRutaId: hoja.id,
-      estado: "recibido",
-      titulo: "Solicitud recibida",
-      descripcion: "La solicitud fue registrada en el sistema municipal.",
-      unidadId: actor?.unitId ?? unidad.id,
-      funcionarioId: null,
-      actorUsuarioId: actor?.userId ?? null,
-      actorNombre: actor?.name ?? null,
-      publico: true,
-    },
-    {
-      hojaRutaId: hoja.id,
-      estado: "derivado",
-      titulo: `Derivada a ${unidad.nombre}`,
-      descripcion: "La unidad responsable recibió la asignación inicial.",
-      unidadId: unidad.id,
-      funcionarioId: null,
-      actorUsuarioId: actor?.userId ?? null,
-      actorNombre: actor?.name ?? null,
-      publico: true,
-    },
-  ]);
 
   await db.insert(auditoria).values({
     entidad: "hoja_de_ruta",
     entidadId: hoja.id,
     accion: "crear",
     funcionarioId: null,
-    detalle: { codigo, unidadDestino: unidad.codigo, prioridad: hoja.prioridad, actorUserId: actor?.userId, actorName: actor?.name },
+    detalle: {
+      codigo,
+      unidadRecepcion: secretariaGeneral.codigo,
+      consignatario: hoja.consignatario,
+      prioridad: hoja.prioridad,
+      actorUserId: actor?.userId,
+      actorName: actor?.name,
+    },
   });
 
   return obtenerSeguimiento(codigo);
@@ -374,6 +345,7 @@ export async function obtenerDetalleHojaRuta(hojaRutaId: string, unidadIds: stri
       id: hojasDeRuta.id,
       code: hojasDeRuta.codigo,
       type: hojasDeRuta.tipo,
+      consignee: hojasDeRuta.consignatario,
       title: hojasDeRuta.asunto,
       description: hojasDeRuta.descripcion,
       priority: hojasDeRuta.prioridad,
@@ -385,7 +357,6 @@ export async function obtenerDetalleHojaRuta(hojaRutaId: string, unidadIds: stri
       createdAt: hojasDeRuta.createdAt,
       updatedAt: hojasDeRuta.updatedAt,
       sender: solicitantes.nombre,
-      senderDocument: solicitantes.documento,
       senderPhone: solicitantes.telefono,
       senderEmail: solicitantes.email,
     }).from(hojasDeRuta)

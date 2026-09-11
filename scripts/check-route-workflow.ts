@@ -10,34 +10,48 @@ import {
   obtenerSeguimiento,
 } from "../db/hojas-ruta";
 import { getDb } from "../db/index";
-import { auditoria, hojasDeRuta, solicitantes, unidades } from "../db/schema";
+import { auditoria, derivaciones, hojasDeRuta, solicitantes, unidades } from "../db/schema";
 
 config({ path: ".env.local", quiet: true });
 const db = getDb();
 const actor = { userId: randomUUID(), name: "Validación automatizada" };
 const sender = `CHECK-FLUJO-${Date.now()}`;
 
-const activeUnits = await db.select({ id: unidades.id, code: unidades.codigo }).from(unidades).where(eq(unidades.activa, true)).limit(2);
-if (activeUnits.length < 2) throw new Error("Se necesitan dos unidades activas para validar derivaciones.");
+const activeUnits = await db.select({ id: unidades.id, code: unidades.codigo }).from(unidades).where(eq(unidades.activa, true));
+const secretariaGeneral = activeUnits.find((unit) => unit.code === "SG");
+const destinationUnit = activeUnits.find((unit) => unit.code !== "SG");
+if (!secretariaGeneral || !destinationUnit) throw new Error("Se necesitan Secretaría General y otra unidad activa para validar derivaciones.");
 
 let routeId = "";
 let applicantId = "";
 let attachmentId = "";
 try {
-  const created = await crearHojaDeRuta({ remitente: sender, asunto: "Validación integral temporal", unidadCodigo: activeUnits[0].code }, actor);
+  const created = await crearHojaDeRuta({ remitente: sender, consignatario: "Alcalde Municipal", asunto: "Validación integral temporal" }, actor);
   if (!created) throw new Error("No se pudo crear el expediente temporal.");
   routeId = created.id;
-  const [row] = await db.select({ applicantId: hojasDeRuta.solicitanteId }).from(hojasDeRuta).where(eq(hojasDeRuta.id, routeId));
+  const [row] = await db.select({
+    applicantId: hojasDeRuta.solicitanteId,
+    state: hojasDeRuta.estado,
+    currentUnitId: hojasDeRuta.unidadActualId,
+    consignee: hojasDeRuta.consignatario,
+  }).from(hojasDeRuta).where(eq(hojasDeRuta.id, routeId));
+  if (!row) throw new Error("La hoja temporal no quedó persistida.");
   applicantId = row.applicantId;
+  if (row.state !== "recibido" || row.currentUnitId !== secretariaGeneral.id || row.consignee !== "Alcalde Municipal") {
+    throw new Error("El registro inicial no quedó recibido en Secretaría General con su consignatario.");
+  }
+  const initialDerivations = await db.select({ id: derivaciones.id }).from(derivaciones).where(eq(derivaciones.hojaRutaId, routeId));
+  if (initialDerivations.length !== 0) throw new Error("El registro inicial creó una derivación automática.");
 
-  await assertRejected(
-    "derivar antes de recibir",
-    gestionarHojaRuta(routeId, { type: "derive", destinationUnitId: activeUnits[1].id, note: "Derivación prematura de validación" }, actor, null),
-    /recepción/i,
-  );
+  await gestionarHojaRuta(routeId, { type: "derive", destinationUnitId: destinationUnit.id, note: "Primera derivación autorizada después de revisión" }, actor, null);
   await assertRejected(
     "cerrar antes de recibir",
     gestionarHojaRuta(routeId, { type: "close", detail: "Cierre prematuro de validación", public: true }, actor, null),
+    /recepción/i,
+  );
+  await assertRejected(
+    "volver a derivar antes de recibir",
+    gestionarHojaRuta(routeId, { type: "derive", destinationUnitId: secretariaGeneral.id, note: "Derivación prematura de validación" }, actor, null),
     /recepción/i,
   );
   await gestionarHojaRuta(routeId, { type: "receive", note: "Recepción validada" }, actor, null);
@@ -48,7 +62,7 @@ try {
   );
   await gestionarHojaRuta(routeId, { type: "act", title: "Informe revisado", detail: "Se revisó la documentación presentada.", public: true }, actor, null);
   await gestionarHojaRuta(routeId, { type: "deadline", dueAt: "2026-12-31", detail: "Plazo de validación" }, actor, null);
-  await gestionarHojaRuta(routeId, { type: "derive", destinationUnitId: activeUnits[1].id, note: "Derivación de validación integral" }, actor, null);
+  await gestionarHojaRuta(routeId, { type: "derive", destinationUnitId: secretariaGeneral.id, note: "Retorno a Secretaría General para cierre" }, actor, null);
   await gestionarHojaRuta(routeId, { type: "receive", note: "Segunda unidad recibió" }, actor, null);
 
   const bytes = Buffer.from("Documento temporal de validación SIGEM", "utf8");
@@ -72,7 +86,7 @@ try {
 
   const reopened = await gestionarHojaRuta(routeId, { type: "reopen", detail: "Reapertura controlada de validación" }, actor, null);
   if (reopened.state !== "en_proceso") throw new Error("La reapertura no actualizó el estado.");
-  console.log("Validación integral correcta: recepción, actuación, plazo, derivación, adjunto, cierre, archivo y reapertura.");
+  console.log("Validación integral correcta: registro sin derivación, primera derivación, recepción, actuación, retorno, adjunto, cierre, archivo y reapertura.");
 } finally {
   if (routeId) await db.delete(auditoria).where(eq(auditoria.entidadId, routeId));
   if (attachmentId) await db.delete(auditoria).where(eq(auditoria.entidadId, attachmentId));

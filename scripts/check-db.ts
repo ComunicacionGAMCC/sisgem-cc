@@ -19,24 +19,30 @@ if (!demo || demo.events.length < 2) throw new Error("El seguimiento ciudadano n
 
 const creada = await crearHojaDeRuta({
   remitente: "Validación automatizada SIGEM",
+  consignatario: "Alcalde Municipal",
   asunto: "Comprobación temporal del flujo de creación",
-  descripcion: "Registro temporal creado por db:check y eliminado al finalizar.",
   prioridad: "normal",
-  unidadCodigo: "COM",
-  documento: `CHECK-${Date.now()}`,
 });
 
-if (!creada?.code || creada.events.length < 2) {
+if (!creada?.code || creada.events.length !== 1) {
   throw new Error("La creación real no generó código o seguimiento.");
 }
 
 const [registro] = await db
-  .select({ id: hojasDeRuta.id, solicitanteId: hojasDeRuta.solicitanteId })
+  .select({
+    id: hojasDeRuta.id,
+    solicitanteId: hojasDeRuta.solicitanteId,
+    state: hojasDeRuta.estado,
+    consignee: hojasDeRuta.consignatario,
+  })
   .from(hojasDeRuta)
   .where(eq(hojasDeRuta.codigo, creada.code))
   .limit(1);
 
 if (!registro) throw new Error("La hoja creada no quedó persistida.");
+if (registro.state !== "recibido" || registro.consignee !== "Alcalde Municipal") {
+  throw new Error("La hoja creada no quedó recibida y lista para su primera derivación.");
+}
 
 await db.delete(auditoria).where(eq(auditoria.entidadId, registro.id));
 await db.delete(hojasDeRuta).where(eq(hojasDeRuta.id, registro.id));

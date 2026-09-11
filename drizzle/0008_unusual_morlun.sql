@@ -1,0 +1,1 @@
+ALTER TABLE "hojas_de_ruta" ADD COLUMN "consignatario" varchar(220);

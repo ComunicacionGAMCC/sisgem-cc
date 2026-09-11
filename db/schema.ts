@@ -133,6 +133,7 @@ export const hojasDeRuta = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     codigo: varchar("codigo", { length: 24 }).notNull(),
     tipo: varchar("tipo", { length: 80 }).default("solicitud_externa").notNull(),
+    consignatario: varchar("consignatario", { length: 220 }),
     asunto: varchar("asunto", { length: 300 }).notNull(),
     descripcion: text("descripcion"),
     prioridad: prioridadHoja("prioridad").default("normal").notNull(),
