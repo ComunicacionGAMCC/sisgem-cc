@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { formatMunicipalDate } from "../lib/municipal-date";
 import { useAccess } from "./access";
+import { UiIcon, type UiIconName } from "./ui-icons";
 import { useMunicipalDate } from "./use-municipal-date";
 
 type Specialty = {
@@ -151,23 +152,23 @@ export function MedicalBookingCard() {
   return (
     <>
       <article className="priorityCard medicalCard" id="ficha-medica">
-        <div className="priorityIcon" aria-hidden="true">✚</div>
-        <div><span>HOSPITAL MUNICIPAL DE CUATRO CAÑADAS</span><h2>Saca tu ficha médica virtual aquí</h2><p>Elige la especialidad, revisa los cupos disponibles y recibe tu número de atención sin hacer fila.</p></div>
-        <button onClick={() => { requestIdRef.current = crypto.randomUUID(); setConfirmation(null); setLoading(true); setOpen(true); }}>Solicitar ficha <span>→</span></button>
+        <div className="priorityIcon" aria-hidden="true"><UiIcon name="medical" size={26} /></div>
+        <div><span>HOSPITAL MUNICIPAL DE CUATRO CAÑADAS</span><h2>Reserva tu atención médica</h2><p>Elige especialidad y fecha para recibir tu número de atención sin hacer fila.</p></div>
+        <button onClick={() => { requestIdRef.current = crypto.randomUUID(); setConfirmation(null); setLoading(true); setOpen(true); }}>Ver especialidades <UiIcon name="chevron" size={16} /></button>
       </article>
 
       {open && (
         <div className="medicalBackdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && close()}>
           <section className="medicalModal" role="dialog" aria-modal="true" aria-labelledby="medical-title">
             <header className="medicalModalHeader">
-              <div className="hospitalSeal">✚</div>
+              <div className="hospitalSeal"><UiIcon name="medical" size={27} /></div>
               <div><span>SALUD MUNICIPAL</span><h2 id="medical-title">{confirmation ? "Tu ficha está reservada" : "Ficha médica virtual"}</h2><p>Hospital Municipal de Cuatro Cañadas</p></div>
               <button className="medicalClose" onClick={close} aria-label="Cerrar">×</button>
             </header>
 
             {confirmation ? (
               <div className="medicalConfirmation">
-                <div className="confirmationCheck">✓</div>
+                <div className="confirmationCheck"><UiIcon name="check" size={30} /></div>
                 <span>RESERVA CONFIRMADA</span>
                 <strong className="medicalCode">{confirmation.code}</strong>
                 <div className="confirmationGrid">
@@ -177,7 +178,7 @@ export function MedicalBookingCard() {
                   <div><small>Hora estimada</small><strong>{confirmation.estimatedTime}</strong></div>
                 </div>
                 <p className="medicalInstructions">{confirmation.instructions}</p>
-                <button className="medicalPrimary" onClick={close}>Listo, guardaré mi código</button>
+                <button className="medicalPrimary" onClick={close}>Guardar código <UiIcon name="check" size={17} /></button>
               </div>
             ) : (
               <form className="medicalForm" onSubmit={submit}>
@@ -188,7 +189,7 @@ export function MedicalBookingCard() {
                     <div className="specialtyGrid">
                       {data.specialties.map((specialty) => (
                         <button type="button" key={specialty.id} className={specialtyId === specialty.id ? "selected" : ""} onClick={() => { setSpecialtyId(specialty.id); setSlotId(""); }}>
-                          <span>✚</span><strong>{specialty.name}</strong><small>{specialty.description}</small>
+                          <span><UiIcon name="medical" size={20} /></span><strong>{specialty.name}</strong><small>{specialty.description}</small>
                         </button>
                       ))}
                     </div>
@@ -215,7 +216,7 @@ export function MedicalBookingCard() {
                   </>
                 )}
                 {error && <p className="medicalError" role="alert">{error}</p>}
-                <footer className="medicalFormFooter"><button type="button" onClick={close}>Cancelar</button><button className="medicalPrimary" type="submit" disabled={loading || submitting || !slotId}>{submitting ? "Reservando…" : "Confirmar y obtener ficha"}</button></footer>
+                <footer className="medicalFormFooter"><button type="button" onClick={close}>Cancelar</button><button className="medicalPrimary" type="submit" disabled={loading || submitting || !slotId}>{submitting ? "Reservando…" : "Confirmar ficha"}<UiIcon name="chevron" size={16} /></button></footer>
               </form>
             )}
           </section>
@@ -266,21 +267,21 @@ export function MedicalModule() {
   return (
     <div className="medicalModule">
       <section className="hospitalHero">
-        <div><span>HOSPITAL MUNICIPAL DE CUATRO CAÑADAS</span><h2>Turnos y atención ambulatoria</h2><p>Reservas, disponibilidad y fichas virtuales.</p></div>
-        <div className="hospitalHeroMark"><b>✚</b><span>Agenda activa<small>Próximos 15 días hábiles</small></span></div>
+        <div><span>HOSPITAL MUNICIPAL DE CUATRO CAÑADAS</span><h2>Gestión de atención médica</h2><p>Cupos, reservas y fichas virtuales en un solo espacio.</p></div>
+        <div className="hospitalHeroMark"><b><UiIcon name="medical" size={22} /></b><span>Sistema operativo<small>15 días hábiles disponibles</small></span></div>
       </section>
 
       <section className="medicalStats" aria-label="Resumen de fichas médicas">
-        <article><span>Fichas emitidas</span><strong>{data.summary.total}</strong><small>Acumulado registrado</small></article>
-        <article><span>Atenciones de hoy</span><strong>{data.summary.hoy}</strong><small>Agenda del día</small></article>
-        <article><span>Por atender</span><strong>{data.summary.pendientes}</strong><small>Reservadas o confirmadas</small></article>
-        <article><span>Especialidades</span><strong>{data.specialties.length}</strong><small>Con agenda habilitada</small></article>
+        <MedicalStat icon="document" label="Fichas emitidas" value={data.summary.total} note="Total registrado" />
+        <MedicalStat icon="calendar" label="Atenciones hoy" value={data.summary.hoy} note="Programadas" />
+        <MedicalStat icon="clock" label="Por atender" value={data.summary.pendientes} note="Pendientes" />
+        <MedicalStat icon="medical" label="Especialidades" value={data.specialties.length} note="Habilitadas" />
       </section>
 
       {access.hasPermission("health.patients.register") && <PatientRegistry />}
 
       <section className="panel medicalAgendaPanel">
-        <header className="medicalPanelHeader"><div><span>DISPONIBILIDAD</span><h3>Agenda de los próximos días</h3></div><small>Los cupos se descuentan al emitir cada ficha</small></header>
+        <header className="medicalPanelHeader"><div className="medicalPanelTitle"><i><UiIcon name="calendar" size={19} /></i><span><small>DISPONIBILIDAD</small><h3>Cupos por especialidad</h3></span></div><em>Actualización en tiempo real</em></header>
         <div className="availabilityTable">
           <div className="availabilityHeader"><span>Especialidad</span>{nextDates.map((date) => <span key={date}>{formatDate(date, true)}</span>)}</div>
           {data.specialties.map((item) => (
@@ -296,9 +297,9 @@ export function MedicalModule() {
       </section>
 
       <section className="panel medicalBookingsPanel">
-        <header className="medicalPanelHeader"><div><span>FICHAS VIRTUALES</span><h3>Reservas registradas</h3></div><em>Datos protegidos</em></header>
+        <header className="medicalPanelHeader"><div className="medicalPanelTitle"><i><UiIcon name="document" size={19} /></i><span><small>FICHAS VIRTUALES</small><h3>Reservas registradas</h3></span></div><em><UiIcon name="lock" size={13} /> Datos protegidos</em></header>
         <div className="medicalFilters">
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por código o documento protegido" aria-label="Buscar ficha médica" />
+          <label className="medicalSearch"><UiIcon name="search" size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por código o documento" aria-label="Buscar ficha médica" /></label>
           <select value={specialty} onChange={(event) => setSpecialty(event.target.value)} aria-label="Filtrar por especialidad">
             <option value="todas">Todas las especialidades</option>
             {data.specialties.map((item) => <option key={item.id} value={item.name}>{item.name}</option>)}
@@ -317,10 +318,14 @@ export function MedicalModule() {
           ))}
           {!visible.length && <p className="emptyMedicalTable">Aún no hay fichas que coincidan con esta búsqueda.</p>}
         </div>
-        <p className="privacyBanner"><b>Privacidad activa.</b> {data.privacy}</p>
+        <p className="privacyBanner"><UiIcon name="lock" size={17} /><span><b>Privacidad activa.</b> {data.privacy}</span></p>
       </section>
     </div>
   );
+}
+
+function MedicalStat({ icon, label, value, note }: { icon: UiIconName; label: string; value: number; note: string }) {
+  return <article><i><UiIcon name={icon} size={19} /></i><span>{label}</span><strong>{value}</strong><small>{note}</small></article>;
 }
 
 type RegisteredPatient = {
@@ -371,8 +376,8 @@ function PatientRegistry() {
   return (
     <section className="panel patientRegistryPanel">
       <header className="medicalPanelHeader">
-        <div><span>ADMISIÓN HOSPITALARIA</span><h3>Registro inicial de pacientes</h3></div>
-        <button className="medicalPrimary" onClick={() => setOpen((value) => !value)}>{open ? "Cerrar formulario" : "+ Registrar paciente"}</button>
+        <div className="medicalPanelTitle"><i><UiIcon name="users" size={19} /></i><span><small>ADMISIÓN HOSPITALARIA</small><h3>Registro inicial de pacientes</h3></span></div>
+        <button className="medicalPrimary" onClick={() => setOpen((value) => !value)}>{open ? "Cerrar formulario" : <><UiIcon name="plus" size={16} /> Registrar paciente</>}</button>
       </header>
       <div className="patientRegistryIntro"><b>Historia clínica única</b><p>Admisión o Secretaría registra al paciente una sola vez. El sistema detecta documentos duplicados y asigna automáticamente el número de historia clínica.</p></div>
       {open && <form className="patientRegistryForm" onSubmit={registerPatient}>

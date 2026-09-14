@@ -25,12 +25,12 @@ const internalViewMeta: Record<InternalView, { title: string; icon: UiIconName }
 };
 
 const services = [
-  { number: "01", title: "Seguimiento digital", description: "Consulta el estado de tu hoja de ruta con el código de tu comprobante.", color: "green", target: "seguimiento" },
-  { number: "02", title: "Impuestos y pagos", description: "Consulta obligaciones, pagos y comprobantes municipales.", color: "orange" },
-  { number: "03", title: "Ficha médica virtual", description: "Obtén una ficha de atención y consulta la información de tu turno.", color: "blue", target: "ficha-medica" },
-  { number: "04", title: "Requisitos y servicios", description: "Conoce requisitos, horarios y lugares de atención antes de acudir.", color: "violet" },
-  { number: "05", title: "Denuncia anónima", description: "Informa posibles hechos de corrupción mediante un canal protegido.", color: "pink", target: "denuncia" },
-  { number: "06", title: "Transparencia", description: "Revisa presupuesto, obras, contrataciones y resultados.", color: "navy" },
+  { number: "01", icon: "route", title: "Seguimiento digital", description: "Consulta el estado de tu hoja de ruta con el código de tu comprobante.", color: "green", target: "seguimiento" },
+  { number: "02", icon: "payments", title: "Impuestos y pagos", description: "Consulta obligaciones, pagos y comprobantes municipales.", color: "gold" },
+  { number: "03", icon: "medical", title: "Ficha médica virtual", description: "Reserva atención y consulta la información de tu turno.", color: "green", target: "ficha-medica" },
+  { number: "04", icon: "services", title: "Requisitos y servicios", description: "Conoce requisitos, horarios y puntos de atención.", color: "gold" },
+  { number: "05", icon: "corruption", title: "Denuncia anónima", description: "Informa posibles hechos de corrupción mediante un canal protegido.", color: "green", target: "denuncia" },
+  { number: "06", icon: "transparency", title: "Transparencia", description: "Revisa presupuesto, obras, contrataciones y resultados.", color: "gold" },
 ] as const;
 
 type RouteItem = {
@@ -277,28 +277,28 @@ function HomeContent() {
           <a href="#seguimiento">Seguimiento</a>
           <a href="#denuncia">Denuncia anónima</a>
         </nav>
-        <button className="employeeAccess" onClick={() => openInternal()}><span>◎</span> Acceder</button>
+        <button className="employeeAccess" onClick={() => openInternal()}><UiIcon name="shield" size={17} /> Acceder</button>
       </header>
 
       <main>
         <section className="hero" id="inicio">
           <i className="heroGlow one" /><i className="heroGlow two" />
           <div className="heroContent">
-            <div className="heroKicker"><i /> GOBIERNO AUTÓNOMO MUNICIPAL DE CUATRO CAÑADAS</div>
+            <div className="heroKicker"><span><UiIcon name="home" size={14} /></span> GOBIERNO AUTÓNOMO MUNICIPAL DE CUATRO CAÑADAS</div>
             <h1><span>Una gestión</span><br /><em>para todos.</em></h1>
-            <p>Servicios e información municipal más cerca de la gente. Los trámites se registran en Secretaría General o en la unidad competente y pueden seguirse aquí con total claridad.</p>
+            <p>Accede a los servicios municipales, solicita tu ficha médica y consulta trámites registrados en Secretaría General o en la unidad competente.</p>
             <div className="heroMainActions">
-              <button className="heroPrimary" onClick={() => scrollToSection("seguimiento")}>Seguir mi trámite <span>→</span></button>
-              <button className="heroMedical" onClick={() => scrollToSection("ficha-medica")}><span>✚</span> Saca tu ficha médica virtual aquí <b>›</b></button>
-              <button className="heroReport" onClick={() => scrollToSection("denuncia")}><span>!</span> Denuncia corrupción de forma anónima <b>›</b></button>
+              <button className="heroPrimary" onClick={() => scrollToSection("seguimiento")}><span><UiIcon name="route" size={19} /></span><b>Seguir mi trámite</b><UiIcon name="chevron" size={17} /></button>
+              <button className="heroMedical" onClick={() => scrollToSection("ficha-medica")}><span><UiIcon name="medical" size={18} /></span><b>Ficha médica virtual</b><UiIcon name="chevron" size={16} /></button>
+              <button className="heroReport" onClick={() => scrollToSection("denuncia")}><span><UiIcon name="corruption" size={18} /></span><b>Denuncia anónima</b><UiIcon name="chevron" size={16} /></button>
             </div>
-            <div className="trustLine"><span>✓</span> Seguimiento transparente <span>✓</span> Disponible las 24 horas</div>
+            <div className="trustLine"><span><UiIcon name="shield" size={15} /></span> Servicios seguros <i /> Disponibles las 24 horas</div>
           </div>
 
           <article className="heroCard" aria-label="Ejemplo de seguimiento de trámite">
             <div className="heroCardTop"><span>Seguimiento en tiempo real</span><i /></div>
             <div className="caseHeader">
-              <div className="caseIcon">HR</div>
+              <div className="caseIcon"><UiIcon name="route" size={22} /></div>
               <div><small>HOJA DE RUTA</small><strong>HR-2026-00481</strong></div>
               <span className="liveBadge">En proceso</span>
             </div>
@@ -315,11 +315,11 @@ function HomeContent() {
         </section>
 
         <section className="serviceSection" id="servicios">
-          <div className="sectionHeading"><span>SERVICIOS DIGITALES</span><h2>El municipio más cerca de ti</h2><p>Consulta información, accede a servicios y realiza el seguimiento de gestiones ya registradas.</p></div>
+          <div className="sectionHeading"><span>SERVICIOS DIGITALES</span><h2>Todo en un solo lugar</h2><p>Información y atención municipal clara, directa y accesible.</p></div>
           <div className="serviceGrid">
             {services.map((service) => (
               <button className="serviceCard" key={service.number} onClick={() => "target" in service ? scrollToSection(service.target) : showServiceNotice(service.title)}>
-                <span className={`serviceIcon ${service.color}`}>{service.number}</span><span className="serviceArrow">↗</span>
+                <span className={`serviceIcon ${service.color}`}><UiIcon name={service.icon} size={22} /></span><span className="serviceNumber">{service.number}</span><span className="serviceArrow"><UiIcon name="chevron" size={16} /></span>
                 <h3>{service.title}</h3><p>{service.description}</p>
               </button>
             ))}
@@ -331,24 +331,24 @@ function HomeContent() {
         <section className="priorityServices" aria-label="Servicios prioritarios">
           <MedicalBookingCard />
           <article className="priorityCard reportCard" id="denuncia">
-            <div className="priorityIcon" aria-hidden="true">!</div>
-            <div><span>TRANSPARENCIA Y LUCHA CONTRA LA CORRUPCIÓN</span><h2>Denuncia anónima y protegida</h2><p>Reporta posibles hechos de corrupción sin publicar tu identidad. El canal especializado estará separado de los trámites administrativos.</p></div>
-            <button onClick={() => showServiceNotice("Denuncia anónima de corrupción")}>Ir al canal de denuncia <span>→</span></button>
+            <div className="priorityIcon" aria-hidden="true"><UiIcon name="corruption" size={25} /></div>
+            <div><span>TRANSPARENCIA Y LUCHA CONTRA LA CORRUPCIÓN</span><h2>Canal de denuncia protegido</h2><p>Reporta posibles hechos de corrupción sin publicar tu identidad.</p></div>
+            <button onClick={() => showServiceNotice("Denuncia anónima de corrupción")}>Ingresar al canal <UiIcon name="chevron" size={16} /></button>
           </article>
         </section>
 
         <section className="trackingSection" id="seguimiento">
-          <div className="trackingCopy"><span>SEGUIMIENTO DIGITAL</span><h2>¿Tu trámite ya fue registrado?</h2><p>Ingresa el código entregado por Secretaría General o la unidad que recibió tu documentación para conocer su estado y responsable.</p></div>
+          <div className="trackingCopy"><span>SEGUIMIENTO DIGITAL</span><h2>Consulta tu trámite</h2><p>Ingresa el código entregado al registrar tu documentación para conocer el estado y la unidad responsable.</p></div>
           <form className="trackingForm" onSubmit={submitTracking}>
             <label htmlFor="tracking-code">Código de seguimiento</label>
-            <div><input id="tracking-code" value={trackingCode} onChange={(event) => setTrackingCode(event.target.value)} placeholder="Ej.: HR-2026-00481" /><button type="submit" disabled={trackingLoading}>{trackingLoading ? "Consultando…" : "Consultar"} <span>→</span></button></div>
-            <small>Consulta el código exacto entregado al registrar tu solicitud.</small>
+            <div><input id="tracking-code" value={trackingCode} onChange={(event) => setTrackingCode(event.target.value)} placeholder="Ej.: HR-2026-00481" /><button type="submit" disabled={trackingLoading}>{trackingLoading ? "Consultando…" : "Consultar"} <UiIcon name="search" size={17} /></button></div>
+            <small>Utiliza el código exacto de tu comprobante.</small>
           </form>
         </section>
 
         {trackingResult && (
           <section className="trackingResult trackingResultLive" aria-live="polite">
-            <div><span className="resultCheck">✓</span><span><small>SOLICITUD ENCONTRADA · {trackingResult.code}</small><h3>{trackingResult.title}</h3><p>{trackingResult.sender} — {trackingResult.unit}</p></span></div>
+            <div><span className="resultCheck"><UiIcon name="check" size={21} /></span><span><small>SOLICITUD ENCONTRADA · {trackingResult.code}</small><h3>{trackingResult.title}</h3><p>{trackingResult.sender} — {trackingResult.unit}</p></span></div>
             <span className={`liveBadge ${trackingResult.tone}`}>{trackingResult.status}</span>
             <div className="trackingEvents">
               {trackingResult.events.map((event) => <article key={event.id}><i /><span><strong>{event.title}</strong><small>{event.description || event.unit || event.status}</small></span><time>{formatMunicipalDate(event.createdAt, { day: "2-digit", month: "2-digit", year: "numeric" })}</time></article>)}
@@ -366,14 +366,14 @@ function HomeContent() {
 
       <footer className="citizenFooter">
         <div><img src="/escudo-gamcc.png" alt="Escudo del Gobierno Autónomo Municipal de Cuatro Cañadas" /><span><strong>Gobierno Autónomo Municipal</strong><small>Cuatro Cañadas · Santa Cruz, Bolivia</small></span></div>
-        <p>Trabajo honesto, progreso nuestro.</p><button onClick={() => openInternal()}>Portal interno →</button>
+        <p>Trabajo honesto, progreso nuestro.</p><button onClick={() => openInternal()}>Portal interno <UiIcon name="chevron" size={15} /></button>
       </footer>
     </div>
   );
 }
 
 function TimelineItem({ done = false, active = false, title, detail }: { done?: boolean; active?: boolean; title: string; detail: string }) {
-  return <div className={`timelineItem ${done ? "done" : ""} ${active ? "active" : ""}`}><span className="timelineDot">{done ? "✓" : ""}</span><div><strong>{title}</strong><span>{detail}</span></div></div>;
+  return <div className={`timelineItem ${done ? "done" : ""} ${active ? "active" : ""}`}><span className="timelineDot">{done ? <UiIcon name="check" size={13} /> : active ? <i /> : null}</span><div><strong>{title}</strong><span>{detail}</span></div></div>;
 }
 
 function HowStep({ number, title, text }: { number: string; title: string; text: string }) {

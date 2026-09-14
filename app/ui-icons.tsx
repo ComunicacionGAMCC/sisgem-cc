@@ -21,6 +21,10 @@ export type UiIconName =
   | "send"
   | "history"
   | "search"
+  | "payments"
+  | "services"
+  | "corruption"
+  | "lock"
   | "chevron";
 
 export function UiIcon({ name, size = 20, className }: { name: UiIconName; size?: number; className?: string }) {
@@ -82,6 +86,14 @@ export function UiIcon({ name, size = 20, className }: { name: UiIconName; size?
       return <svg {...common}><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.6" /><path d="M4 4v4.6h4.6M12 8v5l3 2" /></svg>;
     case "search":
       return <svg {...common}><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg>;
+    case "payments":
+      return <svg {...common}><rect x="3" y="6" width="18" height="13" rx="3" /><path d="M3 10h18M7 15h3" /><path d="M16 3v3M8 3v3" /></svg>;
+    case "services":
+      return <svg {...common}><path d="M4 5h7v6H4zM14 5h6v6h-6zM4 14h7v6H4zM14 14h6v6h-6z" /></svg>;
+    case "corruption":
+      return <svg {...common}><path d="M12 3 20 6v5c0 5-3.1 8.4-8 10-4.9-1.6-8-5-8-10V6l8-3Z" /><path d="M12 8v5m0 3h.01" /></svg>;
+    case "lock":
+      return <svg {...common}><rect x="5" y="10" width="14" height="11" rx="3" /><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" /></svg>;
     case "chevron":
       return <svg {...common}><path d="m9 5 7 7-7 7" /></svg>;
   }
