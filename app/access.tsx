@@ -392,6 +392,8 @@ type OrganizationalPosition = {
   unitName: string;
 };
 
+const globalSigemRoles = new Set(["sigem_admin", "sigem_prensa", "sigem_alcalde", "super_admin"]);
+
 export function AccessManagement() {
   const access = useAccess();
   const [roles, setRoles] = useState<RoleCatalog[]>([]);
@@ -447,11 +449,17 @@ export function AccessManagement() {
   }, [access.client, access.session, canManageSigem, refreshIndex]);
 
   const selectedRole = roles.find((role) => role.code === roleCode);
-  const requiresUnit = selectedRole?.module === "sigem" && !["sigem_admin", "sigem_prensa", "super_admin"].includes(roleCode);
+  const requiresUnit = selectedRole?.module === "sigem" && !globalSigemRoles.has(roleCode);
   const requiresPlantPosition = selectedRole?.module === "sigem" && !["sigem_prensa", "super_admin"].includes(roleCode);
   const editingRole = roles.find((role) => role.code === editingRoleCode);
-  const editingRequiresUnit = editingRole?.module === "sigem" && !["sigem_admin", "sigem_prensa", "super_admin"].includes(editingRoleCode);
+  const editingRequiresUnit = editingRole?.module === "sigem" && !globalSigemRoles.has(editingRoleCode);
   const editingRequiresPlantPosition = editingRole?.module === "sigem" && !["sigem_prensa", "super_admin"].includes(editingRoleCode);
+  const availablePositions = roleCode === "sigem_alcalde"
+    ? positions.filter((position) => /^alcalde$/i.test(position.name.trim()))
+    : positions;
+  const editingAvailablePositions = editingRoleCode === "sigem_alcalde"
+    ? positions.filter((position) => /^alcalde$/i.test(position.name.trim()))
+    : positions;
   const selectedPosition = positions.find((position) => position.code === positionCode);
   const editingPosition = positions.find((position) => position.code === editingPositionCode);
 
@@ -526,7 +534,7 @@ export function AccessManagement() {
       || (normalizedJobTitle.includes("gabinete") && position.name.toLocaleLowerCase("es").includes("gabinete"))
     ));
     const primaryRoleRequiresUnit = primaryRole?.module === "sigem"
-      && !["sigem_admin", "sigem_prensa", "super_admin"].includes(primaryRole.code);
+      && !globalSigemRoles.has(primaryRole.code);
     setSelectedUser(result.user);
     setEditingRoleCode(primaryRole?.code ?? "");
     setEditingUnitId(
@@ -640,10 +648,10 @@ export function AccessManagement() {
             <label>Nombre completo<input name="fullName" required minLength={5} /></label>
             <label>Correo institucional<input name="email" type="email" required /></label>
             <div className="accessFormGrid"><label>Contraseña inicial<input name="password" type="password" autoComplete="new-password" required minLength={12} maxLength={128} /></label><label>Confirmar contraseña<input name="passwordConfirmation" type="password" autoComplete="new-password" required minLength={12} maxLength={128} /></label></div>
-            <label>Tipo de acceso<select value={roleCode} onChange={(event) => { setRoleCode(event.target.value); setUnitId(""); setPositionCode(""); }} required>{roles.map((role) => <option key={role.code} value={role.code}>{role.name}</option>)}</select></label>
+            <label>Tipo de acceso<select value={roleCode} onChange={(event) => { const nextRole = event.target.value; const mayorPosition = nextRole === "sigem_alcalde" ? positions.find((position) => /^alcalde$/i.test(position.name.trim())) : null; setRoleCode(nextRole); setUnitId(""); setPositionCode(mayorPosition?.code ?? ""); }} required>{roles.map((role) => <option key={role.code} value={role.code}>{role.name}</option>)}</select></label>
             {selectedRole && <p className="roleDescription">{selectedRole.description}{selectedRole.requiresMfa ? " · Requiere verificación en dos pasos." : ""}</p>}
             {requiresPlantPosition ? (
-              <label>Cargo de planta según organigrama<select value={positionCode} onChange={(event) => { const nextPosition = positions.find((position) => position.code === event.target.value); setPositionCode(event.target.value); if (nextPosition && requiresUnit) setUnitId(nextPosition.unitId); }} required><option value="">Seleccionar cargo…</option>{units.filter((unit) => positions.some((position) => position.unitId === unit.id)).map((unit) => <optgroup key={unit.id} label={`${unit.code} · ${unit.name}`}>{positions.filter((position) => position.unitId === unit.id).map((position) => <option key={position.code} value={position.code}>{position.name}</option>)}</optgroup>)}</select></label>
+              <label>{roleCode === "sigem_alcalde" ? "Cargo del alcalde según organigrama" : "Cargo de planta según organigrama"}<select value={positionCode} onChange={(event) => { const nextPosition = positions.find((position) => position.code === event.target.value); setPositionCode(event.target.value); if (nextPosition && requiresUnit) setUnitId(nextPosition.unitId); }} required><option value="">Seleccionar cargo…</option>{units.filter((unit) => availablePositions.some((position) => position.unitId === unit.id)).map((unit) => <optgroup key={unit.id} label={`${unit.code} · ${unit.name}`}>{availablePositions.filter((position) => position.unitId === unit.id).map((position) => <option key={position.code} value={position.code}>{position.name}</option>)}</optgroup>)}</select></label>
             ) : (
               <label>Cargo<input name="jobTitle" defaultValue={roleCode === "super_admin" ? "Superadministrador" : ""} required /></label>
             )}
@@ -690,10 +698,10 @@ export function AccessManagement() {
             <form className="accessEditForm" onSubmit={updateManagedUser}>
               <h3>Editar datos y permisos</h3>
               <div className="accessFormGrid"><label>Nombre completo<input name="fullName" defaultValue={selectedUser.fullName} required minLength={5} /></label><label>Correo institucional<input name="email" type="email" defaultValue={selectedUser.email} required /></label></div>
-              <label>Tipo de acceso<select value={editingRoleCode} onChange={(event) => { setEditingRoleCode(event.target.value); setEditingUnitId(""); setEditingPositionCode(""); }} disabled={selectedIsSuperAdmin}>{roles.map((role) => <option key={role.code} value={role.code}>{role.name}</option>)}</select></label>
+              <label>Tipo de acceso<select value={editingRoleCode} onChange={(event) => { const nextRole = event.target.value; const mayorPosition = nextRole === "sigem_alcalde" ? positions.find((position) => /^alcalde$/i.test(position.name.trim())) : null; setEditingRoleCode(nextRole); setEditingUnitId(""); setEditingPositionCode(mayorPosition?.code ?? ""); }} disabled={selectedIsSuperAdmin}>{roles.map((role) => <option key={role.code} value={role.code}>{role.name}</option>)}</select></label>
               {editingRole && <p className="roleDescription">{editingRole.description}{editingRole.requiresMfa ? " · Requiere verificación en dos pasos." : ""}</p>}
               {editingRequiresPlantPosition ? (
-                <label>Cargo de planta según organigrama<select value={editingPositionCode} onChange={(event) => { const nextPosition = positions.find((position) => position.code === event.target.value); setEditingPositionCode(event.target.value); if (nextPosition && editingRequiresUnit) setEditingUnitId(nextPosition.unitId); }} required><option value="">Seleccionar cargo…</option>{units.filter((unit) => positions.some((position) => position.unitId === unit.id)).map((unit) => <optgroup key={unit.id} label={`${unit.code} · ${unit.name}`}>{positions.filter((position) => position.unitId === unit.id).map((position) => <option key={position.code} value={position.code}>{position.name}</option>)}</optgroup>)}</select></label>
+                <label>{editingRoleCode === "sigem_alcalde" ? "Cargo del alcalde según organigrama" : "Cargo de planta según organigrama"}<select value={editingPositionCode} onChange={(event) => { const nextPosition = positions.find((position) => position.code === event.target.value); setEditingPositionCode(event.target.value); if (nextPosition && editingRequiresUnit) setEditingUnitId(nextPosition.unitId); }} required><option value="">Seleccionar cargo…</option>{units.filter((unit) => editingAvailablePositions.some((position) => position.unitId === unit.id)).map((unit) => <optgroup key={unit.id} label={`${unit.code} · ${unit.name}`}>{editingAvailablePositions.filter((position) => position.unitId === unit.id).map((position) => <option key={position.code} value={position.code}>{position.name}</option>)}</optgroup>)}</select></label>
               ) : (
                 <label>Cargo<input name="jobTitle" defaultValue={selectedUser.jobTitle ?? ""} required /></label>
               )}

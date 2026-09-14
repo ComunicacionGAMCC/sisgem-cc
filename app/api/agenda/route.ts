@@ -43,7 +43,9 @@ export async function POST(request: NextRequest) {
     const title = body.title?.trim() ?? "";
     const place = body.place?.trim() || null;
     const description = body.description?.trim() || null;
-    const status = body.status === "tentativa" ? "tentativa" : "confirmada";
+    const status = body.status === "tentativa" || body.status === "cancelada"
+      ? body.status
+      : "confirmada";
 
     if (!datePattern.test(date) || !timePattern.test(startTime)) {
       return NextResponse.json({ error: "La fecha y hora de inicio son obligatorias." }, { status: 400 });

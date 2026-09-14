@@ -1,0 +1,2 @@
+ALTER TABLE "agenda_actividades" DROP CONSTRAINT "agenda_actividades_estado_check";--> statement-breakpoint
+ALTER TABLE "agenda_actividades" ADD CONSTRAINT "agenda_actividades_estado_check" CHECK ("agenda_actividades"."estado" in ('confirmada', 'tentativa', 'cancelada'));

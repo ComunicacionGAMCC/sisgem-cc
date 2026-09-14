@@ -263,7 +263,7 @@ export const agendaActividades = pgTable(
     index("agenda_actividades_estado_idx").on(table.estado),
     check(
       "agenda_actividades_estado_check",
-      sql`${table.estado} in ('confirmada', 'tentativa')`,
+      sql`${table.estado} in ('confirmada', 'tentativa', 'cancelada')`,
     ),
     check(
       "agenda_actividades_horas_check",

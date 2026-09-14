@@ -1,4 +1,4 @@
-import { and, asc, gte, lte } from "drizzle-orm";
+import { and, asc, eq, gte, lte } from "drizzle-orm";
 import { getDb } from "./index";
 import { agendaActividades, auditoria } from "./schema";
 
@@ -10,9 +10,11 @@ export type AgendaActivity = {
   title: string;
   place: string | null;
   description: string | null;
-  status: string;
+  status: AgendaActivityStatus;
   createdByName: string | null;
 };
+
+export type AgendaActivityStatus = "confirmada" | "tentativa" | "cancelada";
 
 export type NewAgendaActivity = {
   date: string;
@@ -21,9 +23,16 @@ export type NewAgendaActivity = {
   title: string;
   place?: string | null;
   description?: string | null;
-  status?: "confirmada" | "tentativa";
+  status?: AgendaActivityStatus;
   createdByUserId: string;
   createdByName: string;
+};
+
+export type UpdateAgendaActivity = Omit<NewAgendaActivity, "createdByUserId" | "createdByName">;
+
+export type AgendaActor = {
+  userId: string;
+  name: string;
 };
 
 function mapActivity(activity: typeof agendaActividades.$inferSelect): AgendaActivity {
@@ -35,7 +44,7 @@ function mapActivity(activity: typeof agendaActividades.$inferSelect): AgendaAct
     title: activity.titulo,
     place: activity.lugar,
     description: activity.descripcion,
-    status: activity.estado,
+    status: activity.estado as AgendaActivityStatus,
     createdByName: activity.creadoPorNombre,
   };
 }
@@ -81,4 +90,73 @@ export async function createAgendaActivity(input: NewAgendaActivity) {
   });
 
   return mapActivity(created);
+}
+
+export async function updateAgendaActivity(
+  id: string,
+  input: UpdateAgendaActivity,
+  actor: AgendaActor,
+) {
+  const db = getDb();
+  const [previous] = await db.select().from(agendaActividades).where(eq(agendaActividades.id, id)).limit(1);
+  if (!previous) return null;
+  const nextSnapshot: AgendaActivity = {
+    id,
+    date: input.date,
+    startTime: input.startTime,
+    endTime: input.endTime || null,
+    title: input.title.trim(),
+    place: input.place?.trim() || null,
+    description: input.description?.trim() || null,
+    status: input.status ?? "confirmada",
+    createdByName: previous.creadoPorNombre,
+  };
+  const [updatedRows] = await db.batch([
+    db.update(agendaActividades)
+      .set({
+        fecha: nextSnapshot.date,
+        horaInicio: nextSnapshot.startTime,
+        horaFin: nextSnapshot.endTime,
+        titulo: nextSnapshot.title,
+        lugar: nextSnapshot.place,
+        descripcion: nextSnapshot.description,
+        estado: nextSnapshot.status,
+        updatedAt: new Date(),
+      })
+      .where(eq(agendaActividades.id, id))
+      .returning(),
+    db.insert(auditoria).values({
+      entidad: "agenda_actividad",
+      entidadId: id,
+      accion: "actualizar",
+      detalle: {
+        anterior: mapActivity(previous),
+        actualizado: nextSnapshot,
+        actorUserId: actor.userId,
+        actorName: actor.name,
+      },
+    }),
+  ] as const);
+  const [updated] = updatedRows;
+  return updated ? mapActivity(updated) : null;
+}
+
+export async function deleteAgendaActivity(id: string, actor: AgendaActor) {
+  const db = getDb();
+  const [previous] = await db.select().from(agendaActividades).where(eq(agendaActividades.id, id)).limit(1);
+  if (!previous) return false;
+  await db.batch([
+    db.delete(agendaActividades).where(eq(agendaActividades.id, id)),
+    db.insert(auditoria).values({
+      entidad: "agenda_actividad",
+      entidadId: id,
+      accion: "eliminar",
+      detalle: {
+        actividad: mapActivity(previous),
+        actorUserId: actor.userId,
+        actorName: actor.name,
+      },
+    }),
+  ] as const);
+  return true;
 }

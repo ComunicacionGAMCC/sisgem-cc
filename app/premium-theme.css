@@ -421,6 +421,24 @@ textarea:focus-visible {
   color: #fff;
 }
 
+.calendarStrip > .calendarDay.hasAgenda {
+  color: #2d6f43;
+  background: linear-gradient(145deg, #edf8ea, #fff8d8);
+  box-shadow: inset 0 0 0 1px #cfe7c8;
+}
+
+.calendarStrip > .calendarDay.hasAgenda b {
+  color: #245c39;
+}
+
+.calendarStrip > .calendarDay > i {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: #7dbb54;
+  box-shadow: 0 0 0 3px #7dbb541c;
+}
+
 .agendaDateToolbar {
   display: flex;
   align-items: end;
@@ -481,6 +499,93 @@ textarea:focus-visible {
   font-weight: 750;
 }
 
+.agendaFeedback.error {
+  color: #80640c;
+  background: #fff9df;
+  border-color: #eedc8a;
+}
+
+.dayEvent {
+  grid-template-columns: 60px 5px minmax(0, 1fr) auto;
+}
+
+.dayEvent > i.neutral {
+  background: #b9bca8;
+}
+
+.dayEvent.cancelada > div:nth-of-type(1) strong {
+  color: #7b8179;
+  text-decoration: line-through;
+}
+
+.agendaEventControl {
+  align-items: flex-end;
+  gap: 8px !important;
+}
+
+.agendaStatus {
+  display: inline-flex;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 6px 9px;
+  font-size: 8px;
+  font-weight: 900;
+}
+
+.agendaStatus.confirmada {
+  color: #17663a;
+  background: #eaf6e9;
+}
+
+.agendaStatus.tentativa {
+  color: #80640c;
+  background: #fff8d9;
+}
+
+.agendaStatus.cancelada {
+  color: #646a63;
+  background: #f0f2ed;
+}
+
+.agendaEventActions {
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: flex-end;
+  gap: 5px !important;
+}
+
+.agendaEventActions button {
+  border: 1px solid #d9e4d8;
+  border-radius: 8px;
+  background: #fff;
+  padding: 6px 8px;
+  color: #2a6540;
+  font-size: 8px;
+  font-weight: 850;
+}
+
+.agendaEventActions button:hover:not(:disabled) {
+  background: #edf7ec;
+  border-color: #a9cfa6;
+}
+
+.agendaEventActions button.cancel,
+.agendaEventActions button.delete {
+  color: #755e12;
+  border-color: #eadc99;
+  background: #fffdf3;
+}
+
+.agendaEventActions button.delete {
+  color: #6c5145;
+  background: #faf7f2;
+}
+
+.agendaEventActions button:disabled {
+  cursor: wait;
+  opacity: .55;
+}
+
 .agendaModal .agendaFeedback {
   margin-top: 4px;
 }
@@ -496,5 +601,20 @@ textarea:focus-visible {
 
   .agendaDateToolbar label {
     flex: 1;
+  }
+
+  .dayEvent {
+    grid-template-columns: 48px 4px minmax(0, 1fr);
+  }
+
+  .agendaEventControl {
+    grid-column: 1 / -1;
+    align-items: flex-start;
+    padding-left: 67px;
+  }
+
+  .agendaEventActions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
   }
 }

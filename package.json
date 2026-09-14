@@ -18,8 +18,10 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:check": "tsx scripts/check-db.ts",
     "api:check": "tsx scripts/check-api.ts",
+    "agenda:check": "tsx scripts/check-agenda.ts",
     "medical:check": "tsx scripts/check-medical.ts",
-    "hr:access:check": "tsx scripts/check-rrhh-access.ts"
+    "hr:access:check": "tsx scripts/check-rrhh-access.ts",
+    "mayor:access:check": "tsx scripts/check-mayor-access.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
