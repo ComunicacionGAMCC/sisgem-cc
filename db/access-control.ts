@@ -130,7 +130,7 @@ export function hasCabinetAgendaManagement(context: AccessContext) {
 
 export function requireCabinetAgendaAccess(context: AccessContext) {
   if (!hasCabinetAgendaAccess(context)) {
-    throw new AccessDeniedError("La agenda del alcalde está reservada para Secretaría de Gabinete.");
+    throw new AccessDeniedError("La agenda institucional está reservada para usuarios autorizados.");
   }
 }
 

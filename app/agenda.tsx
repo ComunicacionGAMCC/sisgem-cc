@@ -9,6 +9,7 @@ import {
   parseMunicipalIsoDate,
 } from "../lib/municipal-date";
 import { useAccess } from "./access";
+import { UiIcon } from "./ui-icons";
 
 type AgendaAccessContext = {
   profile: {
@@ -242,7 +243,7 @@ export function AgendaModule({ today }: { today: Date | null }) {
       formElement.reset();
       setSelectedDate(data.item.date);
       closeForm();
-      setMessage(editingActivity ? "Actividad actualizada correctamente." : "Actividad registrada correctamente en la agenda del alcalde.");
+      setMessage(editingActivity ? "Actividad actualizada correctamente." : "Actividad incorporada a la agenda institucional.");
       reloadAgenda();
     } catch (reason) {
       setMessage(reason instanceof Error ? reason.message : "No se pudo guardar la actividad.");
@@ -304,14 +305,14 @@ export function AgendaModule({ today }: { today: Date | null }) {
   }
 
   if (!canAccessCabinetAgenda(access.context)) {
-    return <section className="moduleView"><p className="agendaState error">No tienes acceso a la agenda del alcalde.</p></section>;
+    return <section className="moduleView"><p className="agendaState error">No tienes acceso a la agenda institucional.</p></section>;
   }
 
   return (
     <section className="moduleView">
       <div className="moduleTitle">
-        <div><h2>Agenda del alcalde</h2><p>Consulta actividades pasadas y futuras o registra una nueva.</p></div>
-        {canManage && <button className="primaryAction" onClick={openNewActivity}><span>＋</span>Agendar actividad</button>}
+        <div><span className="moduleEyebrow">PROGRAMACIÓN</span><h2>Calendario de actividades</h2><p>Consulta la programación institucional por fecha.</p></div>
+        {canManage ? <button className="primaryAction" onClick={openNewActivity}><UiIcon name="plus" size={17} />Nueva actividad</button> : null}
       </div>
       <div className="agendaDateToolbar">
         <label>Ir a una fecha<input type="date" value={activeDate} onChange={(event) => setSelectedDate(event.target.value)} /></label>
@@ -355,7 +356,7 @@ export function AgendaModule({ today }: { today: Date | null }) {
       {showForm && canManage && (
         <div className="modalBackdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) closeForm(); }}>
           <form className="routeModal agendaModal" onSubmit={submitActivity} key={editingActivity?.id ?? "new"} role="dialog" aria-modal="true" aria-labelledby="agenda-modal-title">
-            <header className="modalHeader"><div><span>AGENDA DEL ALCALDE</span><h2 id="agenda-modal-title">{editingActivity ? "Editar actividad" : "Nueva actividad"}</h2></div><button type="button" onClick={closeForm} aria-label="Cerrar">×</button></header>
+            <header className="modalHeader"><div><span>AGENDA INSTITUCIONAL</span><h2 id="agenda-modal-title">{editingActivity ? "Editar actividad" : "Nueva actividad"}</h2></div><button type="button" onClick={closeForm} aria-label="Cerrar">×</button></header>
             <label>Título de la actividad<input name="title" defaultValue={editingActivity?.title ?? ""} required minLength={3} maxLength={220} /></label>
             <div className="formGrid">
               <label>Fecha<input name="date" type="date" defaultValue={editingActivity?.date ?? activeDate} required /></label>

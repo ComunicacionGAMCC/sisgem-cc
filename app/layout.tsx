@@ -8,6 +8,7 @@ import "./access.css";
 import "./recursos-humanos.css";
 import "./contrataciones.css";
 import "./hojas-ruta.css";
+import "./internal-premium.css";
 
 const baseMetadata: Metadata = {
   title: "Municipio Digital | Cuatro Cañadas",

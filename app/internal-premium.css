@@ -1,0 +1,1031 @@
+/* Premium civic workspace — scoped to the authenticated municipal interface. */
+.internalShell {
+  --workspace-green-950: #0b2f1f;
+  --workspace-green-900: #103d29;
+  --workspace-green-800: #175436;
+  --workspace-green-700: #1e7044;
+  --workspace-green-600: #2d8c51;
+  --workspace-green-100: #e7f3e8;
+  --workspace-gold: #d9b83b;
+  --workspace-gold-soft: #f8efc7;
+  --workspace-ink: #173325;
+  --workspace-muted: #6b7b70;
+  --workspace-line: #dce8df;
+  --workspace-surface: #ffffff;
+  min-height: 100vh;
+  grid-template-columns: 272px minmax(0, 1fr);
+  background:
+    radial-gradient(circle at 92% 6%, rgba(214, 232, 178, .42), transparent 28rem),
+    linear-gradient(145deg, #f8fbf7 0%, #f0f6f1 54%, #edf4ee 100%);
+  color: var(--workspace-ink);
+  font-family: "Segoe UI Variable Text", "Segoe UI Variable", "Aptos", "Segoe UI", system-ui, sans-serif;
+  font-size: 16px;
+  letter-spacing: -.008em;
+}
+
+.internalShell button,
+.internalShell input,
+.internalShell select,
+.internalShell textarea {
+  font-family: inherit;
+}
+
+.internalShell button:focus-visible,
+.internalShell input:focus-visible,
+.internalShell select:focus-visible,
+.internalShell textarea:focus-visible {
+  outline: 3px solid rgba(217, 184, 59, .42);
+  outline-offset: 2px;
+}
+
+.internalShell .sidebar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  height: 100vh;
+  min-height: 720px;
+  padding: 22px 17px 18px;
+  background:
+    radial-gradient(circle at 15% 8%, rgba(120, 185, 106, .18), transparent 18rem),
+    linear-gradient(168deg, #123f2b 0%, #0d3323 56%, #08291c 100%);
+  border-right: 1px solid rgba(255, 255, 255, .08);
+  box-shadow: 18px 0 55px rgba(16, 55, 37, .12);
+}
+
+.internalShell .brandButton {
+  width: 100%;
+  height: 78px;
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 255, 255, .78);
+  border-radius: 19px;
+  background: linear-gradient(145deg, #fff, #f5faf5);
+  box-shadow: 0 16px 40px rgba(3, 24, 14, .24), inset 0 1px 0 #fff;
+}
+
+.internalShell .brandButton img {
+  max-height: 56px;
+  object-fit: contain;
+}
+
+.internalShell .sideLabel {
+  margin: 28px 10px 10px;
+  color: #93b7a0;
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .15em;
+}
+
+.internalShell .sideNav {
+  gap: 5px;
+}
+
+.internalShell .sideNav > button {
+  min-height: 52px;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  gap: 11px;
+  padding: 6px 10px 6px 7px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  color: #c7dbcd;
+  font-size: .875rem;
+  font-weight: 650;
+  letter-spacing: -.01em;
+  transition: color .18s ease, background .18s ease, border-color .18s ease, transform .18s ease;
+}
+
+.internalShell .sideNav > button:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, .065);
+  transform: translateX(2px);
+}
+
+.internalShell .navIcon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 12px;
+  color: #a5cdae;
+  background: rgba(255, 255, 255, .055);
+}
+
+.internalShell .sideNav > button.active {
+  color: #fff;
+  background: linear-gradient(95deg, rgba(255, 255, 255, .15), rgba(217, 184, 59, .08));
+  border-color: rgba(255, 255, 255, .1);
+  box-shadow: inset 3px 0 0 var(--workspace-gold), 0 10px 24px rgba(3, 25, 15, .16);
+}
+
+.internalShell .sideNav > button.active .navIcon {
+  color: #173825;
+  border-color: rgba(255, 255, 255, .72);
+  background: linear-gradient(145deg, #f9f3cf, #d9ba42);
+  box-shadow: 0 7px 18px rgba(5, 24, 14, .25);
+}
+
+.internalShell .sideNav > button > b {
+  min-width: 23px;
+  height: 23px;
+  display: grid;
+  place-items: center;
+  padding: 0 6px;
+  border: 1px solid rgba(255, 255, 255, .36);
+  border-radius: 999px;
+  color: #173724;
+  background: linear-gradient(145deg, #f4db6d, #d7af29);
+  font-size: .66rem;
+  font-weight: 850;
+}
+
+.internalShell .sideSubNav {
+  margin: 3px 5px 11px 27px;
+  padding: 3px 0 3px 15px;
+  border-left: 1px solid rgba(217, 184, 59, .35);
+}
+
+.internalShell .sideNav .sideSubNav > button {
+  min-height: 37px;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  padding: 6px 9px;
+  color: #a9c4b1;
+  font-size: .75rem;
+  font-weight: 650;
+}
+
+.internalShell .sideNav .sideSubNav > button > span:first-child {
+  color: #dfc65a;
+}
+
+.internalShell .sideNav .sideSubNav > button.active {
+  color: #fff;
+  background: rgba(255, 255, 255, .09);
+}
+
+.internalShell .sidebarFooter {
+  gap: 11px;
+  padding: 18px 7px 4px;
+  border-top: 1px solid rgba(255, 255, 255, .1);
+}
+
+.internalShell .sidebarFooter .avatar {
+  width: 38px;
+  height: 38px;
+  color: #183824;
+  background: linear-gradient(145deg, #f4dc72, #82b956);
+  font-size: .72rem;
+  box-shadow: 0 8px 20px rgba(5, 25, 15, .24);
+}
+
+.internalShell .sidebarFooter strong {
+  color: #f5faf6;
+  font-size: .76rem;
+  line-height: 1.25;
+}
+
+.internalShell .sidebarFooter div > span {
+  color: #91b39b;
+  font-size: .66rem;
+  line-height: 1.35;
+}
+
+.internalShell .sidebarFooter > button {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  color: #abc4b2;
+  background: rgba(255, 255, 255, .055);
+}
+
+.internalShell .sidebarFooter > button:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, .12);
+}
+
+.internalShell .internalMain {
+  min-width: 0;
+  padding: 0 38px 54px;
+}
+
+.internalShell .internalHeader {
+  position: sticky;
+  top: 0;
+  z-index: 35;
+  min-height: 98px;
+  margin: 0 -6px;
+  padding: 15px 6px;
+  border-bottom: 1px solid rgba(197, 216, 202, .78);
+  background: rgba(247, 251, 247, .86);
+  backdrop-filter: blur(18px) saturate(145%);
+}
+
+.internalPageIdentity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.pageIdentityIcon {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid #d5e3d7;
+  border-radius: 15px;
+  color: var(--workspace-green-700);
+  background: linear-gradient(145deg, #fff, #eef6ef);
+  box-shadow: 0 10px 26px rgba(19, 70, 42, .1), inset 0 1px 0 #fff;
+}
+
+.pageIdentityIcon::after {
+  content: "";
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 10px;
+  height: 10px;
+  border: 3px solid #f6faf6;
+  border-radius: 50%;
+  background: var(--workspace-gold);
+}
+
+.internalShell .sectionKicker,
+.internalShell .moduleEyebrow,
+.internalShell .routeModuleEyebrow {
+  color: #5f956b;
+  font-size: .66rem;
+  font-weight: 850;
+  letter-spacing: .14em;
+  line-height: 1.2;
+}
+
+.internalShell .internalHeader h1 {
+  margin: 4px 0 0;
+  color: #143624;
+  font-size: clamp(1.35rem, 2vw, 1.72rem);
+  font-weight: 720;
+  letter-spacing: -.035em;
+  line-height: 1.08;
+}
+
+.internalShell .headerActions {
+  gap: 10px;
+}
+
+.internalShell .demoPill {
+  min-height: 38px;
+  gap: 7px;
+  padding: 0 13px;
+  border: 1px solid #cae2ce;
+  color: #27643d;
+  background: rgba(239, 248, 237, .92);
+  font-size: .72rem;
+  font-weight: 750;
+}
+
+.internalShell .iconButton {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #d6e2d8;
+  border-radius: 13px;
+  color: #456c53;
+  background: rgba(255, 255, 255, .92);
+  box-shadow: 0 8px 22px rgba(18, 62, 38, .08);
+}
+
+.internalShell .portalLink {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  border-radius: 13px;
+  color: #fff;
+  background: linear-gradient(135deg, #174e33, #237546);
+  font-size: .75rem;
+  font-weight: 750;
+  box-shadow: 0 10px 24px rgba(19, 78, 47, .18);
+}
+
+.internalShell .notificationPanel {
+  border-radius: 20px;
+  box-shadow: 0 26px 80px rgba(15, 53, 33, .2);
+}
+
+.internalShell .notificationFooter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.internalShell .moduleView {
+  padding-top: 32px;
+}
+
+.internalShell .moduleTitle {
+  align-items: flex-end;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.internalShell .moduleTitle > div:first-child {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+}
+
+.internalShell .moduleTitle h2 {
+  margin: 0;
+  color: #163827;
+  font-size: clamp(1.55rem, 2.5vw, 2rem);
+  font-weight: 720;
+  letter-spacing: -.04em;
+  line-height: 1.12;
+}
+
+.internalShell .moduleTitle p {
+  max-width: 680px;
+  margin: 1px 0 0;
+  color: var(--workspace-muted);
+  font-size: .9rem;
+  line-height: 1.55;
+}
+
+.internalShell .primaryAction,
+.internalShell .accessPrimary {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 17px;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 13px;
+  color: #fff;
+  background: linear-gradient(135deg, #1e7545, #175d38);
+  font-size: .79rem;
+  font-weight: 760;
+  box-shadow: 0 12px 26px rgba(21, 91, 53, .19), inset 0 1px 0 rgba(255, 255, 255, .16);
+  transition: transform .16s ease, box-shadow .16s ease, filter .16s ease;
+}
+
+.internalShell .primaryAction:hover,
+.internalShell .accessPrimary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 32px rgba(21, 91, 53, .25), inset 0 1px 0 rgba(255, 255, 255, .16);
+  filter: saturate(1.06);
+}
+
+.internalShell .welcomeRow {
+  align-items: flex-end;
+  padding: 22px 0 29px;
+}
+
+.internalShell .welcomeRow .dateLine {
+  margin-bottom: 8px;
+  color: #548d62;
+  font-size: .72rem;
+  font-weight: 820;
+  letter-spacing: .055em;
+  text-transform: uppercase;
+}
+
+.internalShell .welcomeRow h2 {
+  margin: 0;
+  color: #123522;
+  font-size: clamp(2rem, 3.4vw, 2.72rem);
+  font-weight: 720;
+  letter-spacing: -.055em;
+  line-height: 1.05;
+}
+
+.internalShell .welcomeRow p:not(.dateLine) {
+  margin-top: 10px;
+  color: #708077;
+  font-size: .9rem;
+}
+
+.internalShell .welcomeRow p strong {
+  color: #9b7510;
+  font-weight: 760;
+}
+
+.internalShell .statGrid {
+  gap: 15px;
+}
+
+.internalShell .statCard {
+  position: relative;
+  min-height: 145px;
+  padding: 22px;
+  overflow: hidden;
+  border: 1px solid #dbe7dd;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, .94);
+  box-shadow: 0 14px 38px rgba(20, 65, 41, .07), inset 0 1px 0 #fff;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+
+.internalShell .statCard:hover {
+  transform: translateY(-2px);
+  border-color: #c8ddcc;
+  box-shadow: 0 20px 48px rgba(20, 65, 41, .11), inset 0 1px 0 #fff;
+}
+
+.internalShell .statCard::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 22px;
+  width: 38px;
+  height: 3px;
+  border-radius: 0 0 4px 4px;
+  background: linear-gradient(90deg, #378d52, #d9b83b);
+}
+
+.internalShell .statCard > div {
+  min-height: 98px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.internalShell .statCard > div > span {
+  color: #64766b;
+  font-size: .74rem;
+  font-weight: 760;
+  letter-spacing: .015em;
+}
+
+.internalShell .statCard strong {
+  margin: 12px 0 8px;
+  color: #143a26;
+  font-size: 2.05rem;
+  font-weight: 730;
+  letter-spacing: -.055em;
+  line-height: .9;
+}
+
+.internalShell .statCard small {
+  margin-top: auto;
+  color: #8a978f;
+  font-size: .72rem;
+}
+
+.internalShell .statCardIcon {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 43px;
+  height: 43px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #dce9de;
+  border-radius: 14px;
+  color: #2a7746;
+  background: linear-gradient(145deg, #f6fbf5, #e8f3e7);
+}
+
+.internalShell .statCard.orange .statCardIcon {
+  color: #967213;
+  border-color: #eadfae;
+  background: linear-gradient(145deg, #fffdf2, #f8efc9);
+}
+
+.internalShell .panel,
+.internalShell .accessInvitePanel,
+.internalShell .accessUsersPanel,
+.internalShell .hrTablePanel,
+.internalShell .hrFormPanel,
+.internalShell .hrPayrollSummary,
+.internalShell .hrGeneratePanel {
+  border: 1px solid #dbe7dd;
+  border-radius: 21px;
+  background: rgba(255, 255, 255, .96);
+  box-shadow: 0 18px 48px rgba(20, 65, 41, .075), inset 0 1px 0 #fff;
+}
+
+.internalShell .panelElevated {
+  overflow: hidden;
+}
+
+.internalShell .panelHeader {
+  min-height: 82px;
+  padding: 17px 20px;
+  border-bottom: 1px solid #e7eee8;
+  background: linear-gradient(145deg, rgba(255, 255, 255, .98), rgba(248, 251, 247, .94));
+}
+
+.internalShell .panelTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.internalShell .panelTitleIcon {
+  width: 39px;
+  height: 39px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid #d7e6da;
+  border-radius: 13px;
+  color: #267044;
+  background: linear-gradient(145deg, #f6fbf5, #e6f2e5);
+}
+
+.internalShell .panelEyebrow {
+  color: #60996c;
+  font-size: .62rem;
+  font-weight: 850;
+  letter-spacing: .13em;
+}
+
+.internalShell .panelHeader h3 {
+  margin: 4px 0 0;
+  color: #173827;
+  font-size: 1rem;
+  font-weight: 710;
+  letter-spacing: -.02em;
+}
+
+.internalShell .panelHeader > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 9px;
+  border-radius: 10px;
+  color: #438151;
+  font-size: .7rem;
+  font-weight: 780;
+}
+
+.internalShell .dashboardGrid {
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.internalShell .inboxList {
+  padding: 6px 19px 12px;
+}
+
+.internalShell .inboxRow {
+  min-height: 76px;
+  grid-template-columns: 42px minmax(190px, 1.5fr) minmax(120px, .8fr) minmax(110px, .65fr) 34px;
+  gap: 13px;
+  padding: 12px 2px;
+  border-bottom-color: #edf2ee;
+}
+
+.internalShell .docGlyph {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #d9e7dc;
+  border-radius: 12px;
+  color: #2e7d49;
+  background: #f1f8f1;
+}
+
+.internalShell .inboxIdentity strong {
+  color: #203d2c;
+  font-size: .79rem;
+  font-weight: 710;
+}
+
+.internalShell .inboxIdentity > span,
+.internalShell .inboxStatus small {
+  color: #89968e;
+  font-size: .68rem;
+}
+
+.internalShell .inboxRow > button {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  color: #5f7767;
+  background: #f5f8f5;
+}
+
+.internalShell .agendaItem {
+  grid-template-columns: 48px 5px minmax(0, 1fr);
+  gap: 11px;
+  padding: 13px 0;
+}
+
+.internalShell .agendaItem time,
+.internalShell .agendaItem strong {
+  color: #254332;
+  font-size: .75rem;
+}
+
+.internalShell .agendaItem span {
+  font-size: .67rem;
+}
+
+.internalShell .subtleAction {
+  min-height: 37px;
+  color: #4a7857;
+  font-size: .7rem;
+  font-weight: 730;
+}
+
+.internalShell .accessModuleHero,
+.internalShell .hrHero,
+.internalShell .medicalAdminHero {
+  border: 1px solid #d4e5d7;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 88% 10%, rgba(237, 214, 105, .2), transparent 16rem),
+    linear-gradient(135deg, #f9fcf8, #edf6ed);
+  box-shadow: 0 18px 48px rgba(21, 73, 45, .08), inset 0 1px 0 #fff;
+}
+
+.internalShell .accessModuleHero h2,
+.internalShell .hrHero h2,
+.internalShell .medicalAdminHero h2 {
+  color: #153a26;
+  font-size: clamp(1.55rem, 2.5vw, 2rem);
+  font-weight: 720;
+  letter-spacing: -.04em;
+}
+
+.internalShell .accessModuleHero p,
+.internalShell .hrHero p,
+.internalShell .medicalAdminHero p {
+  color: #65776b;
+  font-size: .87rem;
+  line-height: 1.55;
+}
+
+.internalShell .filterBar,
+.internalShell .routeSearchBar,
+.internalShell .agendaDateToolbar {
+  min-height: 54px;
+  border: 1px solid #d9e5db;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .94);
+  box-shadow: 0 10px 28px rgba(21, 68, 43, .055);
+}
+
+.internalShell .filterBar input,
+.internalShell .routeSearchBar input,
+.internalShell .agendaDateToolbar input {
+  min-height: 40px;
+  color: #243e2e;
+  background: #f5f8f5;
+  font-size: .8rem;
+}
+
+.internalShell .routeInboxTabs {
+  gap: 12px;
+}
+
+.internalShell .routeInboxTabs > button {
+  min-height: 82px;
+  border-radius: 17px;
+  box-shadow: 0 11px 28px rgba(21, 68, 43, .055);
+}
+
+.internalShell .routeTabIcon,
+.internalShell .routeStateGlyph {
+  display: grid;
+  place-items: center;
+}
+
+.internalShell .routeInboxTabs strong,
+.internalShell .routeInboxIdentity > strong,
+.internalShell .routeInboxUnit strong {
+  font-size: .79rem;
+}
+
+.internalShell .routeInboxTabs small,
+.internalShell .routeInboxIdentity small,
+.internalShell .routeInboxStatus small,
+.internalShell .routeInboxUnit small {
+  font-size: .68rem;
+}
+
+.internalShell .routeRowAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 38px;
+}
+
+.internalShell .procurementMetric,
+.internalShell .payrollTotals article {
+  border-radius: 18px;
+  box-shadow: 0 12px 30px rgba(21, 68, 43, .06);
+}
+
+.internalShell .procurementMetric span,
+.internalShell .payrollTotals span {
+  font-size: .74rem;
+}
+
+.internalShell .procurementMetric strong,
+.internalShell .payrollTotals strong {
+  letter-spacing: -.035em;
+}
+
+.internalShell .calendarStrip {
+  padding: 12px;
+  border-radius: 18px;
+  box-shadow: 0 12px 32px rgba(21, 68, 43, .06);
+}
+
+.internalShell .calendarStrip .calendarDay {
+  min-height: 64px;
+  border-radius: 13px;
+}
+
+.internalShell .calendarStrip .calendarDay b {
+  font-size: 1.05rem;
+}
+
+.internalShell .dayAgenda {
+  padding: 24px;
+}
+
+.internalShell .dayAgenda h3 {
+  font-size: 1.02rem;
+  font-weight: 720;
+}
+
+.internalShell .dayEvent {
+  min-height: 76px;
+  padding: 15px 2px;
+}
+
+.internalShell .dayEvent strong {
+  font-size: .82rem;
+}
+
+.internalShell .dayEvent div span,
+.internalShell .agendaStatus,
+.internalShell .agendaEventActions button {
+  font-size: .69rem;
+}
+
+.internalShell .routeModal,
+.internalShell .accessUserModal {
+  border: 1px solid rgba(255, 255, 255, .72);
+  border-radius: 23px;
+  box-shadow: 0 30px 90px rgba(6, 35, 20, .32);
+}
+
+.internalShell .routeModal > label,
+.internalShell .formGrid label,
+.internalShell .accessModule form > label,
+.internalShell .accessFormGrid label,
+.internalShell .hrFormPanel label {
+  color: #415749;
+  font-size: .76rem;
+  font-weight: 720;
+}
+
+.internalShell .routeModal input,
+.internalShell .routeModal textarea,
+.internalShell .routeModal select,
+.internalShell .accessModule input,
+.internalShell .accessModule select,
+.internalShell .hrFormPanel input,
+.internalShell .hrFormPanel select,
+.internalShell .hrFormPanel textarea {
+  min-height: 43px;
+  border-radius: 11px;
+  color: #233e2e;
+  font-size: .8rem;
+}
+
+.internalShell .routeInboxRow,
+.internalShell .procurementTableRow,
+.internalShell .hrRow,
+.internalShell .payrollRow,
+.internalShell .accessUsersPanel > article {
+  content-visibility: auto;
+  contain-intrinsic-size: 72px;
+}
+
+@media (max-width: 1200px) {
+  .internalShell {
+    grid-template-columns: 244px minmax(0, 1fr);
+  }
+
+  .internalShell .internalMain {
+    padding-right: 27px;
+    padding-left: 27px;
+  }
+
+  .internalShell .sideNav > button {
+    font-size: .8rem;
+  }
+}
+
+@media (max-width: 900px) {
+  .internalShell {
+    display: block;
+  }
+
+  .internalShell .sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 70;
+    width: 100%;
+    height: 72px;
+    min-height: 0;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 13px;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .internalShell .brandButton {
+    width: 112px;
+    height: 52px;
+    flex: 0 0 auto;
+    padding: 5px 10px;
+    border-radius: 14px;
+  }
+
+  .internalShell .brandButton img {
+    max-height: 43px;
+  }
+
+  .internalShell .sideLabel,
+  .internalShell .sidebarFooter {
+    display: none;
+  }
+
+  .internalShell .sideNav {
+    width: max-content;
+    flex-direction: row;
+    gap: 5px;
+    margin: 0;
+  }
+
+  .internalShell .sideNav > button {
+    min-height: 48px;
+    grid-template-columns: 34px auto;
+    gap: 7px;
+    padding: 5px 10px 5px 6px;
+    white-space: nowrap;
+  }
+
+  .internalShell .navIcon {
+    width: 34px;
+    height: 34px;
+  }
+
+  .internalShell .sideNav > button > b,
+  .internalShell .sideSubNav {
+    display: none;
+  }
+
+  .internalShell .internalMain {
+    padding-right: 22px;
+    padding-left: 22px;
+  }
+
+  .internalShell .internalHeader {
+    top: 72px;
+  }
+
+  .internalShell .inboxRow {
+    grid-template-columns: 42px minmax(180px, 1fr) minmax(110px, .7fr) 34px;
+  }
+
+  .internalShell .inboxRow .unitPill {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .internalShell .internalMain {
+    padding: 0 14px 36px;
+  }
+
+  .internalShell .internalHeader {
+    min-height: 80px;
+    margin: 0;
+    padding: 12px 0;
+  }
+
+  .pageIdentityIcon {
+    width: 41px;
+    height: 41px;
+    border-radius: 13px;
+  }
+
+  .internalShell .sectionKicker {
+    font-size: .58rem;
+  }
+
+  .internalShell .internalHeader h1 {
+    font-size: 1.2rem;
+  }
+
+  .internalShell .demoPill,
+  .internalShell .portalLink {
+    display: none;
+  }
+
+  .internalShell .moduleView {
+    padding-top: 24px;
+  }
+
+  .internalShell .moduleTitle {
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .internalShell .moduleTitle h2 {
+    font-size: 1.55rem;
+  }
+
+  .internalShell .welcomeRow {
+    align-items: flex-start;
+  }
+
+  .internalShell .welcomeRow h2 {
+    font-size: 2rem;
+  }
+
+  .internalShell .statGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .internalShell .statCard {
+    min-height: 132px;
+    padding: 18px;
+  }
+
+  .internalShell .statCardIcon {
+    width: 36px;
+    height: 36px;
+    top: 14px;
+    right: 14px;
+  }
+
+  .internalShell .statCard strong {
+    font-size: 1.75rem;
+  }
+
+  .internalShell .panelHeader {
+    min-height: 74px;
+    padding: 14px;
+  }
+
+  .internalShell .panelTitleIcon {
+    width: 35px;
+    height: 35px;
+  }
+
+  .internalShell .inboxRow {
+    grid-template-columns: 39px minmax(0, 1fr) 32px;
+  }
+
+  .internalShell .inboxStatus,
+  .internalShell .unitPill {
+    display: none;
+  }
+
+  .internalShell .routeInboxTabs {
+    grid-template-columns: 1fr;
+  }
+
+  .internalShell .dayEvent {
+    grid-template-columns: 48px 4px minmax(0, 1fr);
+  }
+
+  .internalShell .agendaEventControl {
+    grid-column: 1 / -1;
+    align-items: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .internalShell *,
+  .internalShell *::before,
+  .internalShell *::after {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+  }
+}

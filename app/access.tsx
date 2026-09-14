@@ -638,7 +638,7 @@ export function AccessManagement() {
   return (
     <div className="accessModule moduleView">
       <section className="accessModuleHero">
-        <div><span>CONTROL DE IDENTIDADES</span><h2>Usuarios, cargos y accesos</h2><p>Cada persona recibe únicamente los permisos de su función y área.</p></div>
+        <div><span>CONTROL DE IDENTIDADES</span><h2>Directorio y permisos</h2><p>Accesos definidos según función y área.</p></div>
         <div className="accessSecurityBadge"><b>2FA</b><span>Seguridad reforzada<small>Administración auditada</small></span></div>
       </section>
       <div className="accessModuleGrid">
@@ -661,7 +661,7 @@ export function AccessManagement() {
           </form>
         </section>
         <section className="panel accessUsersPanel">
-          <header><span>DIRECTORIO ACTIVO</span><h3>Usuarios administrados</h3><p>{users.length} cuenta{users.length === 1 ? "" : "s"} visible{users.length === 1 ? "" : "s"} según tu ámbito.</p></header>
+          <header><span>DIRECTORIO ACTIVO</span><h3>Cuentas habilitadas</h3><p>{users.length} cuenta{users.length === 1 ? "" : "s"} en tu ámbito.</p></header>
           {loading && <p className="accessEmpty">Cargando directorio…</p>}
           {!loading && users.map((user) => (
             <article key={user.id}>

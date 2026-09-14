@@ -89,7 +89,7 @@ test("keeps municipal data lazy, protected, and ChatGPT Sites compatible", async
 
   assert.match(page, /fetch\("\/api\/hojas-ruta"/);
   assert.match(page, /\/api\/seguimiento\//);
-  assert.match(page, /Acceso protegido · 2FA/);
+  assert.match(page, /UiIcon name="shield".*Acceso protegido/);
   assert.match(page, /profile\.fullName\.trim\(\)\.split/);
   assert.match(page, /Buenos días, \{userName\}/);
   assert.doesNotMatch(page, /Buenos días, Saúl/);
@@ -124,7 +124,7 @@ test("keeps municipal data lazy, protected, and ChatGPT Sites compatible", async
   assert.match(agendaService, /accion: "actualizar"/);
   assert.match(agendaService, /accion: "eliminar"/);
   assert.match(accessServer, /context\.profile\.jobTitle/);
-  assert.match(accessServer, /La agenda del alcalde.*Secretar.*de Gabinete/);
+  assert.match(accessServer, /La agenda institucional.*usuarios autorizados/);
   assert.doesNotMatch(page, /directores|Central 4 Este|avance de obra/);
   assert.doesNotMatch(`${page}\n${medical}`, /(?:jueves, 6 de agosto|Hoy, 4 de agosto|Martes, 4 de agosto|Al 4 de agosto|Fecha estimada: 6 de agosto)/i);
   assert.match(listApi, /export async function GET/);

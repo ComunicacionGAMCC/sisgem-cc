@@ -8,9 +8,21 @@ import { MedicalBookingCard, MedicalModule } from "./medical";
 import { HumanResourcesModule } from "./recursos-humanos";
 import { ProcurementModule } from "./contrataciones";
 import { RouteCreateModal, RouteWorkflowPanel, type RouteFilter } from "./hojas-ruta";
+import { UiIcon, type UiIconName } from "./ui-icons";
 import { useMunicipalDate } from "./use-municipal-date";
 
 type InternalView = "inicio" | "hojas" | "fichas" | "accesos" | "rrhh" | "contrataciones" | "agenda" | "transparencia";
+
+const internalViewMeta: Record<InternalView, { title: string; icon: UiIconName }> = {
+  inicio: { title: "Panel principal", icon: "home" },
+  hojas: { title: "Gestión documental", icon: "route" },
+  fichas: { title: "Salud municipal", icon: "medical" },
+  accesos: { title: "Administración de usuarios", icon: "users" },
+  rrhh: { title: "Gestión de personal", icon: "people" },
+  contrataciones: { title: "Gestión contractual", icon: "procurement" },
+  agenda: { title: "Agenda institucional", icon: "calendar" },
+  transparencia: { title: "Rendición pública", icon: "transparency" },
+};
 
 const services = [
   { number: "01", title: "Seguimiento digital", description: "Consulta el estado de tu hoja de ruta con el código de tu comprobante.", color: "green", target: "seguimiento" },
@@ -410,7 +422,7 @@ function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, se
 }) {
   const access = useAccess();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const titles: Record<InternalView, string> = { inicio: "Panel de gestión", hojas: "Hojas de ruta", fichas: "Fichas médicas", accesos: "Usuarios y accesos", rrhh: "Recursos Humanos", contrataciones: "Contrataciones", agenda: "Agenda institucional", transparencia: "Transparencia" };
+  const currentView = internalViewMeta[view];
   const canManageUsers = access.hasPermission("platform.users.manage") || access.hasPermission("sigem.users.manage") || access.hasPermission("health.users.manage");
   const canAccessAgenda = canAccessCabinetAgenda(access.context);
   const pressOnly = access.context?.roles.some((role) => role.code === "sigem_prensa") ?? false;
@@ -434,20 +446,20 @@ function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, se
         <button className="brandButton" onClick={openCitizen} aria-label="Volver al portal ciudadano"><img src="/marca-cuatro-canadas.png" alt="Cuatro Cañadas" /></button>
         <div className="sideLabel">GESTIÓN MUNICIPAL</div>
         <nav className="sideNav" aria-label="Navegación interna">
-          {!pressOnly && <SideButton active={view === "inicio"} icon="⌂" label="Inicio" onClick={() => setView("inicio")} />}
-          {access.hasPermission("sigem.routes.read") && <><SideButton active={view === "hojas"} icon="↗" label="Hojas de ruta" badge={mayorReadOnly ? undefined : String(routesToReceive)} onClick={() => { if (mayorReadOnly) setFilter("historial"); setView("hojas"); }} />{view === "hojas" && <div className="sideSubNav" aria-label="Submenú de hojas de ruta">{!mayorReadOnly && <><button className={filter === "recibir" ? "active" : ""} onClick={() => setFilter("recibir")}><span>↓</span> Recibir <b>{routesToReceive}</b></button><button className={filter === "derivar" ? "active" : ""} onClick={() => setFilter("derivar")}><span>→</span> Derivar <b>{routesToDerive}</b></button></>}<button className={filter === "historial" ? "active" : ""} onClick={() => setFilter("historial")}><span>✓</span> {mayorReadOnly ? "Consulta general" : "Historial"}</button></div>}</>}
-          {access.hasPermission("health.appointments.read") && <SideButton active={view === "fichas"} icon="✚" label="Fichas médicas" onClick={() => setView("fichas")} />}
-          {canManageUsers && <SideButton active={view === "accesos"} icon="♙" label="Usuarios y accesos" onClick={() => setView("accesos")} />}
-          {access.hasPermission("sigem.hr.read") && <SideButton active={view === "rrhh"} icon="♧" label="Recursos Humanos" onClick={() => setView("rrhh")} />}
-          {access.hasPermission("sigem.routes.read") && <SideButton active={view === "contrataciones"} icon="▣" label="Contrataciones" onClick={() => setView("contrataciones")} />}
-          {canAccessAgenda && <SideButton active={view === "agenda"} icon="□" label="Agenda" onClick={() => setView("agenda")} />}
-          {access.hasPermission("sigem.reports.read") && <SideButton active={view === "transparencia"} icon="◎" label="Transparencia" onClick={() => setView("transparencia")} />}
+          {!pressOnly && <SideButton active={view === "inicio"} icon="home" label="Inicio" onClick={() => setView("inicio")} />}
+          {access.hasPermission("sigem.routes.read") && <><SideButton active={view === "hojas"} icon="route" label="Hojas de ruta" badge={mayorReadOnly ? undefined : String(routesToReceive)} onClick={() => { if (mayorReadOnly) setFilter("historial"); setView("hojas"); }} />{view === "hojas" && <div className="sideSubNav" aria-label="Submenú de hojas de ruta">{!mayorReadOnly && <><button className={filter === "recibir" ? "active" : ""} onClick={() => setFilter("recibir")}><span><UiIcon name="receive" size={15} /></span> Recibir <b>{routesToReceive}</b></button><button className={filter === "derivar" ? "active" : ""} onClick={() => setFilter("derivar")}><span><UiIcon name="send" size={15} /></span> Derivar <b>{routesToDerive}</b></button></>}<button className={filter === "historial" ? "active" : ""} onClick={() => setFilter("historial")}><span><UiIcon name="history" size={15} /></span> {mayorReadOnly ? "Consulta general" : "Historial"}</button></div>}</>}
+          {access.hasPermission("health.appointments.read") && <SideButton active={view === "fichas"} icon="medical" label="Fichas médicas" onClick={() => setView("fichas")} />}
+          {canManageUsers && <SideButton active={view === "accesos"} icon="users" label="Usuarios" onClick={() => setView("accesos")} />}
+          {access.hasPermission("sigem.hr.read") && <SideButton active={view === "rrhh"} icon="people" label="Recursos Humanos" onClick={() => setView("rrhh")} />}
+          {access.hasPermission("sigem.routes.read") && <SideButton active={view === "contrataciones"} icon="procurement" label="Contrataciones" onClick={() => setView("contrataciones")} />}
+          {canAccessAgenda && <SideButton active={view === "agenda"} icon="calendar" label="Agenda institucional" onClick={() => setView("agenda")} />}
+          {access.hasPermission("sigem.reports.read") && <SideButton active={view === "transparencia"} icon="transparency" label="Transparencia" onClick={() => setView("transparencia")} />}
         </nav>
-        <div className="sidebarFooter"><span className="avatar small">{initials}</span><div><strong>{access.context?.profile.fullName}</strong><span>{access.context?.profile.jobTitle || access.context?.roles[0]?.name}</span></div><button onClick={access.signOut} aria-label="Cerrar sesión">↪</button></div>
+        <div className="sidebarFooter"><span className="avatar small">{initials}</span><div><strong>{access.context?.profile.fullName}</strong><span>{access.context?.profile.jobTitle || access.context?.roles[0]?.name}</span></div><button onClick={access.signOut} aria-label="Cerrar sesión"><UiIcon name="logout" size={18} /></button></div>
       </aside>
 
       <main className="internalMain">
-        <header className="internalHeader"><div><span className="sectionKicker">MUNICIPIO DIGITAL</span><h1>{titles[view]}</h1></div><div className="headerActions"><span className="demoPill live" title={routeDataLive ? "Datos municipales conectados" : "Acceso institucional verificado"}><i /> Acceso protegido · 2FA</span><div className="notificationMenu"><button className="iconButton" aria-label={`Notificaciones: ${routeAlerts.length} pendientes`} aria-expanded={notificationsOpen} onClick={() => setNotificationsOpen((open) => !open)}>●{routeAlerts.length > 0 && <span className="notificationCount">{routeAlerts.length > 9 ? "9+" : routeAlerts.length}</span>}</button>{notificationsOpen && <section className="notificationPanel" aria-label="Alertas de hojas de ruta"><header><div><span>ALERTAS</span><strong>Requieren atención</strong></div><button onClick={() => setNotificationsOpen(false)} aria-label="Cerrar alertas">×</button></header><div className="notificationList">{routeAlerts.length ? routeAlerts.slice(0, 6).map((alert) => <button key={alert.route.code} onClick={() => openRoute(alert.route)}><i className={alert.level} /><span><strong>{alert.label}</strong><small>{alert.route.code} · {alert.route.title}</small></span><b>›</b></button>) : <p>No tienes alertas pendientes.</p>}</div>{routeAlerts.length > 0 && <button className="notificationFooter" onClick={() => { setView("hojas"); setFilter("historial"); setNotificationsOpen(false); }}>Ver toda la bandeja →</button>}</section>}</div><button className="portalLink" onClick={openCitizen}>Ver portal ciudadano</button></div></header>
+        <header className="internalHeader"><div className="internalPageIdentity"><span className="pageIdentityIcon"><UiIcon name={currentView.icon} size={23} /></span><div><span className="sectionKicker">GAMCC · GESTIÓN INTERNA</span><h1>{currentView.title}</h1></div></div><div className="headerActions"><span className="demoPill live" title={routeDataLive ? "Datos municipales conectados" : "Acceso institucional verificado"}><UiIcon name="shield" size={15} /> Acceso protegido</span><div className="notificationMenu"><button className="iconButton" aria-label={`Notificaciones: ${routeAlerts.length} pendientes`} aria-expanded={notificationsOpen} onClick={() => setNotificationsOpen((open) => !open)}><UiIcon name="bell" size={19} />{routeAlerts.length > 0 && <span className="notificationCount">{routeAlerts.length > 9 ? "9+" : routeAlerts.length}</span>}</button>{notificationsOpen && <section className="notificationPanel" aria-label="Alertas de hojas de ruta"><header><div><span>ALERTAS</span><strong>Requieren atención</strong></div><button onClick={() => setNotificationsOpen(false)} aria-label="Cerrar alertas">×</button></header><div className="notificationList">{routeAlerts.length ? routeAlerts.slice(0, 6).map((alert) => <button key={alert.route.code} onClick={() => openRoute(alert.route)}><i className={alert.level} /><span><strong>{alert.label}</strong><small>{alert.route.code} · {alert.route.title}</small></span><UiIcon name="chevron" size={15} /></button>) : <p>No tienes alertas pendientes.</p>}</div>{routeAlerts.length > 0 && <button className="notificationFooter" onClick={() => { setView("hojas"); setFilter("historial"); setNotificationsOpen(false); }}>Ver bandeja completa <UiIcon name="chevron" size={14} /></button>}</section>}</div><button className="portalLink" onClick={openCitizen}>Portal ciudadano <UiIcon name="external" size={15} /></button></div></header>
         {view === "inicio" && <Dashboard setView={(nextView) => { if (nextView === "hojas" && mayorReadOnly) setFilter("historial"); setView(nextView); }} openRouteModal={openRouteModal} items={allRoutes} userName={greetingName} today={today} canAccessAgenda={canAccessAgenda} canCreateRoutes={canCreateRoutes} openRoute={openRoute} />}
         {view === "hojas" && <RoutesModule openRouteModal={openRouteModal} filter={filter} setFilter={setFilter} search={search} setSearch={setSearch} visibleRoutes={visibleRoutes} allRoutes={allRoutes} loading={routeLoading} refresh={refreshRoutes} />}
         {view === "fichas" && <MedicalModule />}
@@ -462,8 +474,8 @@ function InternalPortal({ view, setView, openCitizen, openRouteModal, filter, se
   );
 }
 
-function SideButton({ active, icon, label, badge, onClick }: { active: boolean; icon: string; label: string; badge?: string; onClick: () => void }) {
-  return <button className={active ? "active" : ""} onClick={onClick}><span className="navIcon">{icon}</span><span>{label}</span>{badge && <b>{badge}</b>}</button>;
+function SideButton({ active, icon, label, badge, onClick }: { active: boolean; icon: UiIconName; label: string; badge?: string; onClick: () => void }) {
+  return <button className={active ? "active" : ""} onClick={onClick}><span className="navIcon"><UiIcon name={icon} size={19} /></span><span>{label}</span>{badge ? <b>{badge}</b> : null}</button>;
 }
 
 function Dashboard({ setView, openRouteModal, items, userName, today, canAccessAgenda, canCreateRoutes, openRoute }: { setView: (view: InternalView) => void; openRouteModal: () => void; items: readonly RouteItem[]; userName: string; today: Date | null; canAccessAgenda: boolean; canCreateRoutes: boolean; openRoute: (route: RouteItem) => void }) {
@@ -478,22 +490,22 @@ function Dashboard({ setView, openRouteModal, items, userName, today, canAccessA
     ? formatMunicipalDate(today, { day: "numeric", month: "long" })
     : "fecha actual";
   return <>
-    <section className="welcomeRow"><div><p className="dateLine">{dateLabel}</p><h2>Buenos días, {userName}.</h2><p>{alertas.length ? <>Tienes <strong>{alertas.length} {alertas.length === 1 ? "asunto prioritario" : "asuntos prioritarios"}</strong> que requieren atención.</> : <>No tienes asuntos prioritarios pendientes.</>}</p></div>{canCreateRoutes && <button className="primaryAction" onClick={openRouteModal}><span>＋</span>Nueva hoja de ruta</button>}</section>
-    <section className="statGrid" aria-label="Resumen del trabajo"><StatCard color="blue" label="En mi bandeja" value={String(items.length)} note="Registros disponibles" /><StatCard color="orange" label="Prioridad urgente" value={String(urgentes)} note="Requieren atención" /><StatCard color="green" label="Finalizadas" value={String(finalizados)} note="En la bandeja actual" /><StatCard color="violet" label="Pendientes" value={String(pendientes.length)} note="En seguimiento" /></section>
-    <div className={`dashboardGrid ${canAccessAgenda ? "" : "single"}`}><section className="panel"><PanelHeader eyebrow="HOJA DE RUTA" title="Requieren tu atención" action="Ver toda la bandeja →" onClick={() => setView("hojas")} /><RouteList items={alertas.map((alert) => alert.route).slice(0, 3)} onOpen={openRoute} /></section>{canAccessAgenda && <section className="panel agendaPanel"><PanelHeader eyebrow="AGENDA DEL ALCALDE" title={`Hoy, ${shortDateLabel}`} action="↗" onClick={() => setView("agenda")} /><AgendaSummary today={today} onOpen={() => setView("agenda")} /></section>}</div>
+    <section className="welcomeRow"><div><p className="dateLine">{dateLabel}</p><h2>Buenos días, {userName}.</h2><p>{alertas.length ? <><strong>{alertas.length} {alertas.length === 1 ? "asunto prioritario" : "asuntos prioritarios"}</strong> requieren atención.</> : <>Tu bandeja prioritaria está al día.</>}</p></div>{canCreateRoutes ? <button className="primaryAction" onClick={openRouteModal}><UiIcon name="plus" size={17} />Nueva hoja de ruta</button> : null}</section>
+    <section className="statGrid" aria-label="Resumen del trabajo"><StatCard color="blue" icon="inbox" label="En bandeja" value={String(items.length)} note="Total asignado" /><StatCard color="orange" icon="alert" label="Prioridad urgente" value={String(urgentes)} note="Con plazo crítico" /><StatCard color="green" icon="check" label="Finalizadas" value={String(finalizados)} note="Procesos cerrados" /><StatCard color="violet" icon="clock" label="Pendientes" value={String(pendientes.length)} note="En gestión" /></section>
+    <div className={`dashboardGrid ${canAccessAgenda ? "" : "single"}`}><section className="panel panelElevated"><PanelHeader icon="route" eyebrow="GESTIÓN DOCUMENTAL" title="Requieren tu atención" action="Ver bandeja" onClick={() => setView("hojas")} /><RouteList items={alertas.map((alert) => alert.route).slice(0, 3)} onOpen={openRoute} /></section>{canAccessAgenda ? <section className="panel agendaPanel panelElevated"><PanelHeader icon="calendar" eyebrow="AGENDA INSTITUCIONAL" title={`Hoy, ${shortDateLabel}`} action="Abrir" onClick={() => setView("agenda")} /><AgendaSummary today={today} onOpen={() => setView("agenda")} /></section> : null}</div>
   </>;
 }
 
-function StatCard({ color, label, value, note }: { color: string; label: string; value: string; note: string }) {
-  return <article className={`statCard ${color}`}><div><span>{label}</span><strong>{value}</strong><small>{note}</small></div><i /></article>;
+function StatCard({ color, icon, label, value, note }: { color: string; icon: UiIconName; label: string; value: string; note: string }) {
+  return <article className={`statCard ${color}`}><div><span>{label}</span><strong>{value}</strong><small>{note}</small></div><span className="statCardIcon"><UiIcon name={icon} size={20} /></span></article>;
 }
 
-function PanelHeader({ eyebrow, title, action, onClick }: { eyebrow: string; title: string; action: string; onClick: () => void }) {
-  return <header className="panelHeader"><div><span className="panelEyebrow">{eyebrow}</span><h3>{title}</h3></div><button onClick={onClick}>{action}</button></header>;
+function PanelHeader({ icon, eyebrow, title, action, onClick }: { icon: UiIconName; eyebrow: string; title: string; action: string; onClick: () => void }) {
+  return <header className="panelHeader"><div className="panelTitleGroup"><span className="panelTitleIcon"><UiIcon name={icon} size={18} /></span><div><span className="panelEyebrow">{eyebrow}</span><h3>{title}</h3></div></div><button onClick={onClick}>{action}<UiIcon name="chevron" size={14} /></button></header>;
 }
 
 function RouteList({ items, full = false, onOpen }: { items: readonly RouteItem[]; full?: boolean; onOpen?: (route: RouteItem) => void }) {
-  return <div className={`inboxList ${full ? "full" : ""}`}>{items.length ? items.map((route) => <article className="inboxRow" key={route.code}><span className="docGlyph">▤</span><div className="inboxIdentity"><strong>{route.title}</strong><span>{route.sender} · <b>{route.code}</b></span></div><span className="unitPill">{route.unit}</span><div className="inboxStatus"><span className={route.tone}>{route.status}</span><small>{route.due}</small></div><button aria-label={`Abrir ${route.code}`} onClick={() => onOpen?.(route)}>›</button></article>) : <p className="emptyState">No hay hojas de ruta que requieran atención.</p>}</div>;
+  return <div className={`inboxList ${full ? "full" : ""}`}>{items.length ? items.map((route) => <article className="inboxRow" key={route.code}><span className="docGlyph"><UiIcon name="document" size={19} /></span><div className="inboxIdentity"><strong>{route.title}</strong><span>{route.sender} · <b>{route.code}</b></span></div><span className="unitPill">{route.unit}</span><div className="inboxStatus"><span className={route.tone}>{route.status}</span><small>{route.due}</small></div><button aria-label={`Abrir ${route.code}`} onClick={() => onOpen?.(route)}><UiIcon name="chevron" size={17} /></button></article>) : <p className="emptyState">No hay hojas de ruta que requieran atención.</p>}</div>;
 }
 
 function RoutesModule({ openRouteModal, filter, setFilter, search, setSearch, visibleRoutes, allRoutes, loading, refresh }: { openRouteModal: () => void; filter: RouteFilter; setFilter: (value: RouteFilter) => void; search: string; setSearch: (value: string) => void; visibleRoutes: readonly RouteItem[]; allRoutes: readonly RouteItem[]; loading: boolean; refresh: () => void }) {
@@ -505,5 +517,5 @@ function TransparencyModule({ today }: { today: Date | null }) {
   const canPublish = access.hasPermission("platform.users.manage") || access.hasPermission("sigem.users.manage");
   const year = today?.getUTCFullYear() ?? getMunicipalYear();
   const dateLabel = today ? formatMunicipalDate(today, { day: "numeric", month: "long" }) : "fecha actual";
-  return <section className="moduleView"><div className="moduleTitle"><div><h2>Transparencia municipal</h2><p>Información pública preparada para la ciudadanía</p></div>{canPublish && <button className="primaryAction">Publicar actualización</button>}</div><section className="transparencyHero"><div><span>EJECUCIÓN PRESUPUESTARIA {year}</span><strong>62,8%</strong><p>Información demostrativa pendiente de conexión con la fuente oficial.</p></div><div className="donut"><span>63<small>%</small></span></div></section><div className="statGrid"><StatCard color="blue" label="Presupuesto vigente" value="Bs 84,2 M" note={`Gestión ${year}`} /><StatCard color="green" label="Ejecutado" value="Bs 52,9 M" note={`Al ${dateLabel}`} /><StatCard color="orange" label="Proyectos activos" value="38" note="12 con avance público" /><StatCard color="violet" label="Procesos publicados" value="117" note="Sincronización pendiente" /></div></section>;
+  return <section className="moduleView"><div className="moduleTitle"><div><span className="moduleEyebrow">TRANSPARENCIA</span><h2>Ejecución e indicadores</h2><p>Información pública preparada para la ciudadanía.</p></div>{canPublish ? <button className="primaryAction"><UiIcon name="plus" size={17} />Publicar actualización</button> : null}</div><section className="transparencyHero"><div><span>EJECUCIÓN PRESUPUESTARIA {year}</span><strong>62,8%</strong><p>Información demostrativa pendiente de conexión con la fuente oficial.</p></div><div className="donut"><span>63<small>%</small></span></div></section><div className="statGrid"><StatCard color="blue" icon="inbox" label="Presupuesto vigente" value="Bs 84,2 M" note={`Gestión ${year}`} /><StatCard color="green" icon="check" label="Ejecutado" value="Bs 52,9 M" note={`Al ${dateLabel}`} /><StatCard color="orange" icon="clock" label="Proyectos activos" value="38" note="12 con avance público" /><StatCard color="violet" icon="transparency" label="Procesos publicados" value="117" note="Sincronización pendiente" /></div></section>;
 }

@@ -266,7 +266,7 @@ export function MedicalModule() {
   return (
     <div className="medicalModule">
       <section className="hospitalHero">
-        <div><span>HOSPITAL MUNICIPAL DE CUATRO CAÑADAS</span><h2>Panel de fichas médicas virtuales</h2><p>Control operativo de reservas, turnos y disponibilidad para atención ambulatoria.</p></div>
+        <div><span>HOSPITAL MUNICIPAL DE CUATRO CAÑADAS</span><h2>Turnos y atención ambulatoria</h2><p>Reservas, disponibilidad y fichas virtuales.</p></div>
         <div className="hospitalHeroMark"><b>✚</b><span>Agenda activa<small>Próximos 15 días hábiles</small></span></div>
       </section>
 

@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     if (error instanceof AccessDeniedError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    console.error("No se pudo consultar la agenda del alcalde", error);
+    console.error("No se pudo consultar la agenda institucional", error);
     return NextResponse.json({ error: "La agenda no está disponible temporalmente." }, { status: 503 });
   }
 }
