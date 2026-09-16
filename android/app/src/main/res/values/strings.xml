@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Municipio Digital</string>
+    <string name="title_activity_main">Municipio Digital</string>
+    <string name="package_name">bo.gob.gamcc.municipiodigital</string>
+    <string name="custom_url_scheme">bo.gob.gamcc.municipiodigital</string>
+</resources>

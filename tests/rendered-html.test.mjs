@@ -362,3 +362,23 @@ test("uses the premium green and gold visual system", async () => {
   assert.doesNotMatch(theme, /#071247|#079bd6|#4a44a5|#17297d/i);
   assert.match(manifest, /"theme_color": "#123b28"/);
 });
+
+test("configures the Municipio Digital Android test app safely", async () => {
+  const [capacitorConfig, androidManifest, androidVersions] = await Promise.all([
+    readFile(new URL("../capacitor.config.ts", import.meta.url), "utf8"),
+    readFile(
+      new URL("../android/app/src/main/AndroidManifest.xml", import.meta.url),
+      "utf8",
+    ),
+    readFile(new URL("../android/variables.gradle", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(capacitorConfig, /appId: "bo\.gob\.gamcc\.municipiodigital"/);
+  assert.match(capacitorConfig, /appName: "Municipio Digital"/);
+  assert.match(capacitorConfig, /url: "https:\/\/sisgem-cc\.vercel\.app\/"/);
+  assert.match(capacitorConfig, /cleartext: false/);
+  assert.match(androidManifest, /android\.permission\.INTERNET/);
+  assert.doesNotMatch(androidManifest, /screenOrientation/);
+  assert.match(androidVersions, /minSdkVersion = 24/);
+  assert.match(androidVersions, /targetSdkVersion = 36/);
+});

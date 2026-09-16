@@ -21,9 +21,14 @@
     "agenda:check": "tsx scripts/check-agenda.ts",
     "medical:check": "tsx scripts/check-medical.ts",
     "hr:access:check": "tsx scripts/check-rrhh-access.ts",
-    "mayor:access:check": "tsx scripts/check-mayor-access.ts"
+    "mayor:access:check": "tsx scripts/check-mayor-access.ts",
+    "android:sync": "cap sync android",
+    "android:apk": "cap sync android && cd android && gradlew.bat assembleDebug",
+    "android:open": "cap open android"
   },
   "dependencies": {
+    "@capacitor/android": "8.5.2",
+    "@capacitor/core": "8.5.2",
     "@neondatabase/serverless": "^1.0.2",
     "@supabase/supabase-js": "2.112.4",
     "drizzle-orm": "0.45.2",
@@ -33,6 +38,8 @@
     "react-dom": "19.2.6"
   },
   "devDependencies": {
+    "@capacitor/assets": "3.0.5",
+    "@capacitor/cli": "8.5.2",
     "@cloudflare/vite-plugin": "1.37.1",
     "@eslint/js": "9.39.4",
     "@next/eslint-plugin-next": "16.2.6",
