@@ -18,6 +18,14 @@ const config: CapacitorConfig = {
     captureInput: true,
     webContentsDebuggingEnabled: true,
   },
+  ios: {
+    backgroundColor: "#f5f8f1",
+    contentInset: "automatic",
+    preferredContentMode: "mobile",
+    scrollEnabled: true,
+    allowsLinkPreview: false,
+    webContentsDebuggingEnabled: true,
+  },
 };
 
 export default config;

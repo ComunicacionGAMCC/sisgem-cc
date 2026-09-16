@@ -24,11 +24,14 @@
     "mayor:access:check": "tsx scripts/check-mayor-access.ts",
     "android:sync": "cap sync android",
     "android:apk": "cap sync android && cd android && gradlew.bat assembleDebug",
-    "android:open": "cap open android"
+    "android:open": "cap open android",
+    "ios:sync": "cap sync ios",
+    "ios:open": "cap open ios"
   },
   "dependencies": {
     "@capacitor/android": "8.5.2",
     "@capacitor/core": "8.5.2",
+    "@capacitor/ios": "8.5.2",
     "@neondatabase/serverless": "^1.0.2",
     "@supabase/supabase-js": "2.112.4",
     "drizzle-orm": "0.45.2",

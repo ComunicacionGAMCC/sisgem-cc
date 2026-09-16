@@ -363,14 +363,20 @@ test("uses the premium green and gold visual system", async () => {
   assert.match(manifest, /"theme_color": "#123b28"/);
 });
 
-test("configures the Municipio Digital Android test app safely", async () => {
-  const [capacitorConfig, androidManifest, androidVersions] = await Promise.all([
+test("configures the Municipio Digital mobile test apps safely", async () => {
+  const [capacitorConfig, androidManifest, androidVersions, iosInfo, iosProject] =
+    await Promise.all([
     readFile(new URL("../capacitor.config.ts", import.meta.url), "utf8"),
     readFile(
       new URL("../android/app/src/main/AndroidManifest.xml", import.meta.url),
       "utf8",
     ),
     readFile(new URL("../android/variables.gradle", import.meta.url), "utf8"),
+    readFile(new URL("../ios/App/App/Info.plist", import.meta.url), "utf8"),
+    readFile(
+      new URL("../ios/App/App.xcodeproj/project.pbxproj", import.meta.url),
+      "utf8",
+    ),
   ]);
 
   assert.match(capacitorConfig, /appId: "bo\.gob\.gamcc\.municipiodigital"/);
@@ -381,4 +387,12 @@ test("configures the Municipio Digital Android test app safely", async () => {
   assert.doesNotMatch(androidManifest, /screenOrientation/);
   assert.match(androidVersions, /minSdkVersion = 24/);
   assert.match(androidVersions, /targetSdkVersion = 36/);
+  assert.match(iosInfo, /<string>Municipio Digital<\/string>/);
+  assert.match(iosInfo, /CFBundleDevelopmentRegion[\s\S]*<string>es<\/string>/);
+  assert.match(iosInfo, /UIInterfaceOrientationPortrait/);
+  assert.match(iosInfo, /UIInterfaceOrientationLandscapeLeft/);
+  assert.match(iosInfo, /UIInterfaceOrientationLandscapeRight/);
+  assert.match(iosProject, /PRODUCT_BUNDLE_IDENTIFIER = bo\.gob\.gamcc\.municipiodigital/);
+  assert.match(iosProject, /IPHONEOS_DEPLOYMENT_TARGET = 15\.0/);
+  assert.match(iosProject, /MARKETING_VERSION = 1\.0/);
 });
