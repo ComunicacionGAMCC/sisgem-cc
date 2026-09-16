@@ -32,11 +32,11 @@ test("server-renders the Municipio Digital portal", async () => {
   assert.match(html, /Municipio Digital \| Cuatro Cañadas/);
   assert.match(html, /Gobierno Autónomo Municipal de Cuatro Cañadas/);
   assert.match(html, /id="seguimiento"/);
-  assert.match(html, /Consulta el código exacto entregado/);
-  assert.match(html, /Saca tu ficha médica virtual aquí/);
+  assert.match(html, /Ingresa el código entregado al registrar tu documentación/);
+  assert.match(html, /Reserva tu atención médica/);
   assert.match(html, /Hospital Municipal de Cuatro Cañadas/i);
-  assert.match(html, /Solicitar ficha/);
-  assert.match(html, /Denuncia anónima y protegida/);
+  assert.match(html, /Ver especialidades/);
+  assert.match(html, /Denuncia anónima/);
   assert.match(html, /Acceder<\/button>/);
   assert.match(html, /Secretaría General o en la unidad municipal competente/);
   assert.doesNotMatch(html, /Iniciar un trámite/);
@@ -240,7 +240,7 @@ test("implements database-backed procurement management", async () => {
 });
 
 test("enforces scoped institutional access with MFA and auditable roles", async () => {
-  const [page, accessUi, accessServer, userApi, managedUserApi, accessMigration, bootstrapMigration, managementMigration, mayorMigration, bootstrapScript] = await Promise.all([
+  const [page, accessUi, accessServer, userApi, managedUserApi, accessMigration, bootstrapMigration, managementMigration, mayorMigration, directAccessMigration, bootstrapScript] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/access.tsx", import.meta.url), "utf8"),
     readFile(new URL("../db/access-control.ts", import.meta.url), "utf8"),
@@ -260,6 +260,10 @@ test("enforces scoped institutional access with MFA and auditable roles", async 
     ),
     readFile(
       new URL("../supabase/migrations/20260911184500_mayor_readonly_agenda_role.sql", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../supabase/migrations/20260916103000_allow_johan_direct_password_access.sql", import.meta.url),
       "utf8",
     ),
     readFile(new URL("../scripts/bootstrap-superadmins.ts", import.meta.url), "utf8"),
@@ -312,6 +316,10 @@ test("enforces scoped institutional access with MFA and auditable roles", async 
   assert.match(mayorMigration, /'sigem\.agenda\.manage'/);
   assert.match(mayorMigration, /'sigem\.routes\.read'/);
   assert.doesNotMatch(mayorMigration, /'sigem\.routes\.(?:create|receive|route|update|close)'/);
+  assert.match(directAccessMigration, /mfa_exempt boolean not null default false/);
+  assert.match(directAccessMigration, /johanbergenfriesen@gmail\.com/);
+  assert.match(directAccessMigration, /\(not profile\.mfa_exempt\) and exists/);
+  assert.match(directAccessMigration, /mfa_exemption_enabled/);
   assert.doesNotMatch(`${accessUi}\n${accessServer}\n${userApi}`, /service_role|HEALTH_SUPABASE_SECRET_KEY/);
 });
 
