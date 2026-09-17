@@ -3,6 +3,7 @@ import { and, eq, like } from "drizzle-orm";
 import { config } from "dotenv";
 import {
   createAgendaActivity,
+  decideAgendaAttendance,
   deleteAgendaActivity,
   listAgendaActivities,
   updateAgendaActivity,
@@ -51,26 +52,47 @@ async function main() {
     });
     if (created.status !== "tentativa") throw new Error("No se creó la actividad por confirmar.");
 
-    const confirmed = await updateAgendaActivity(created.id, {
+    const edited = await updateAgendaActivity(created.id, {
       date: created.date,
       startTime: created.startTime,
       endTime: created.endTime,
       title: `${title} editada`,
       place: created.place,
       description: created.description,
-      status: "confirmada",
+      status: "tentativa",
     }, actor);
-    if (!confirmed || confirmed.status !== "confirmada" || !confirmed.title.endsWith("editada")) {
-      throw new Error("No se editó y confirmó la actividad correctamente.");
+    if (!edited || edited.status !== "tentativa" || !edited.title.endsWith("editada")) {
+      throw new Error("No se editó la actividad correctamente.");
+    }
+
+    const attendanceDecision = await decideAgendaAttendance(created.id, {
+      attendance: "alcalde",
+    }, actor);
+    if (!attendanceDecision.item
+      || attendanceDecision.item.status !== "confirmada"
+      || attendanceDecision.item.attendance !== "alcalde") {
+      throw new Error("No se confirmó la asistencia del alcalde.");
+    }
+
+    const delegatedDecision = await decideAgendaAttendance(created.id, {
+      attendance: "designado",
+      delegatePositionCode: "SM-001",
+      delegatePositionName: "Secretario Municipal",
+      delegateUnitName: "Secretaría Municipal",
+    }, actor);
+    if (!delegatedDecision.item
+      || delegatedDecision.item.attendance !== "designado"
+      || delegatedDecision.item.delegatePositionCode !== "SM-001") {
+      throw new Error("No se registró la designación del representante.");
     }
 
     const updated = await updateAgendaActivity(created.id, {
-      date: confirmed.date,
-      startTime: confirmed.startTime,
-      endTime: confirmed.endTime,
-      title: confirmed.title,
-      place: confirmed.place,
-      description: confirmed.description,
+      date: delegatedDecision.item.date,
+      startTime: delegatedDecision.item.startTime,
+      endTime: delegatedDecision.item.endTime,
+      title: delegatedDecision.item.title,
+      place: delegatedDecision.item.place,
+      description: delegatedDecision.item.description,
       status: "cancelada",
     }, actor);
     if (!updated || updated.status !== "cancelada" || !updated.title.endsWith("editada")) {
@@ -90,7 +112,7 @@ async function main() {
       throw new Error("La actividad eliminada todavía aparece en la agenda.");
     }
 
-    console.log("Agenda validada: crear, editar, confirmar, cancelar y eliminar.");
+    console.log("Agenda validada: crear, editar, confirmar alcalde, designar, cancelar y eliminar.");
   } finally {
     await cleanupValidationActivities();
   }

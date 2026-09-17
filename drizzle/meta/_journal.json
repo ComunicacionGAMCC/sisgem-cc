@@ -71,6 +71,13 @@
       "when": 1789153655999,
       "tag": "0009_tricky_maria_hill",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1789597888663,
+      "tag": "0010_cuddly_talos",
+      "breakpoints": true
     }
   ]
 }

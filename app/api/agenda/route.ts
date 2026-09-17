@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAgendaActivity, listAgendaActivities, type NewAgendaActivity } from "../../../db/agenda";
+import { listarDelegadosAgendaActivos } from "../../../db/unidades";
 import {
   AccessDeniedError,
   authorizeRequest,
@@ -21,8 +22,11 @@ export async function GET(request: NextRequest) {
     if (!datePattern.test(from) || !datePattern.test(to) || from > to) {
       return NextResponse.json({ error: "Selecciona un rango de fechas válido." }, { status: 400 });
     }
-    const items = await listAgendaActivities(from, to);
-    return NextResponse.json({ items });
+    const [items, delegatePositions] = await Promise.all([
+      listAgendaActivities(from, to),
+      listarDelegadosAgendaActivos(),
+    ]);
+    return NextResponse.json({ items, delegatePositions });
   } catch (error) {
     if (error instanceof AccessDeniedError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
@@ -43,9 +47,6 @@ export async function POST(request: NextRequest) {
     const title = body.title?.trim() ?? "";
     const place = body.place?.trim() || null;
     const description = body.description?.trim() || null;
-    const status = body.status === "tentativa" || body.status === "cancelada"
-      ? body.status
-      : "confirmada";
 
     if (!datePattern.test(date) || !timePattern.test(startTime)) {
       return NextResponse.json({ error: "La fecha y hora de inicio son obligatorias." }, { status: 400 });
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
       title,
       place,
       description,
-      status,
+      status: "tentativa",
       createdByUserId: context.profile.id,
       createdByName: context.profile.fullName,
     });

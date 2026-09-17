@@ -253,7 +253,14 @@ export const agendaActividades = pgTable(
     titulo: varchar("titulo", { length: 220 }).notNull(),
     lugar: varchar("lugar", { length: 220 }),
     descripcion: text("descripcion"),
-    estado: varchar("estado", { length: 30 }).default("confirmada").notNull(),
+    estado: varchar("estado", { length: 30 }).default("tentativa").notNull(),
+    asistencia: varchar("asistencia", { length: 30 }).default("pendiente").notNull(),
+    representanteCargoCodigo: varchar("representante_cargo_codigo", { length: 30 }),
+    representanteCargo: varchar("representante_cargo", { length: 240 }),
+    representanteUnidad: varchar("representante_unidad", { length: 180 }),
+    decisionPorUsuarioId: uuid("decision_por_usuario_id"),
+    decisionPorNombre: varchar("decision_por_nombre", { length: 220 }),
+    decisionAt: timestamp("decision_at", { withTimezone: true }),
     creadoPorUsuarioId: uuid("creado_por_usuario_id"),
     creadoPorNombre: varchar("creado_por_nombre", { length: 220 }),
     ...auditColumns,
@@ -261,9 +268,18 @@ export const agendaActividades = pgTable(
   (table) => [
     index("agenda_actividades_fecha_hora_idx").on(table.fecha, table.horaInicio),
     index("agenda_actividades_estado_idx").on(table.estado),
+    index("agenda_actividades_asistencia_idx").on(table.asistencia),
     check(
       "agenda_actividades_estado_check",
       sql`${table.estado} in ('confirmada', 'tentativa', 'cancelada')`,
+    ),
+    check(
+      "agenda_actividades_asistencia_check",
+      sql`${table.asistencia} in ('pendiente', 'alcalde', 'designado')`,
+    ),
+    check(
+      "agenda_actividades_representante_check",
+      sql`(${table.asistencia} = 'designado' and ${table.representanteCargo} is not null) or (${table.asistencia} <> 'designado' and ${table.representanteCargoCodigo} is null and ${table.representanteCargo} is null and ${table.representanteUnidad} is null)`,
     ),
     check(
       "agenda_actividades_horas_check",

@@ -11,10 +11,17 @@ export type AgendaActivity = {
   place: string | null;
   description: string | null;
   status: AgendaActivityStatus;
+  attendance: AgendaAttendance;
+  delegatePositionCode: string | null;
+  delegatePositionName: string | null;
+  delegateUnitName: string | null;
+  decisionByName: string | null;
+  decidedAt: string | null;
   createdByName: string | null;
 };
 
 export type AgendaActivityStatus = "confirmada" | "tentativa" | "cancelada";
+export type AgendaAttendance = "pendiente" | "alcalde" | "designado";
 
 export type NewAgendaActivity = {
   date: string;
@@ -45,6 +52,12 @@ function mapActivity(activity: typeof agendaActividades.$inferSelect): AgendaAct
     place: activity.lugar,
     description: activity.descripcion,
     status: activity.estado as AgendaActivityStatus,
+    attendance: activity.asistencia as AgendaAttendance,
+    delegatePositionCode: activity.representanteCargoCodigo,
+    delegatePositionName: activity.representanteCargo,
+    delegateUnitName: activity.representanteUnidad,
+    decisionByName: activity.decisionPorNombre,
+    decidedAt: activity.decisionAt?.toISOString() ?? null,
     createdByName: activity.creadoPorNombre,
   };
 }
@@ -70,7 +83,7 @@ export async function createAgendaActivity(input: NewAgendaActivity) {
       titulo: input.title.trim(),
       lugar: input.place?.trim() || null,
       descripcion: input.description?.trim() || null,
-      estado: input.status ?? "confirmada",
+      estado: input.status ?? "tentativa",
       creadoPorUsuarioId: input.createdByUserId,
       creadoPorNombre: input.createdByName,
     })
@@ -108,7 +121,17 @@ export async function updateAgendaActivity(
     title: input.title.trim(),
     place: input.place?.trim() || null,
     description: input.description?.trim() || null,
-    status: input.status ?? "confirmada",
+    status: input.status === "cancelada"
+      ? "cancelada"
+      : previous.estado === "confirmada"
+        ? "confirmada"
+        : "tentativa",
+    attendance: previous.asistencia as AgendaAttendance,
+    delegatePositionCode: previous.representanteCargoCodigo,
+    delegatePositionName: previous.representanteCargo,
+    delegateUnitName: previous.representanteUnidad,
+    decisionByName: previous.decisionPorNombre,
+    decidedAt: previous.decisionAt?.toISOString() ?? null,
     createdByName: previous.creadoPorNombre,
   };
   const [updatedRows] = await db.batch([
@@ -139,6 +162,64 @@ export async function updateAgendaActivity(
   ] as const);
   const [updated] = updatedRows;
   return updated ? mapActivity(updated) : null;
+}
+
+export type AgendaAttendanceDecision = {
+  attendance: Exclude<AgendaAttendance, "pendiente">;
+  delegatePositionCode?: string | null;
+  delegatePositionName?: string | null;
+  delegateUnitName?: string | null;
+};
+
+export type AgendaAttendanceDecisionResult =
+  | { item: AgendaActivity; reason: null }
+  | { item: null; reason: "not_found" | "cancelled" };
+
+export async function decideAgendaAttendance(
+  id: string,
+  input: AgendaAttendanceDecision,
+  actor: AgendaActor,
+): Promise<AgendaAttendanceDecisionResult> {
+  const db = getDb();
+  const [previous] = await db.select().from(agendaActividades).where(eq(agendaActividades.id, id)).limit(1);
+  if (!previous) return { item: null, reason: "not_found" };
+  if (previous.estado === "cancelada") return { item: null, reason: "cancelled" };
+
+  const delegated = input.attendance === "designado";
+  const decisionAt = new Date();
+  const [updatedRows] = await db.batch([
+    db.update(agendaActividades)
+      .set({
+        estado: "confirmada",
+        asistencia: input.attendance,
+        representanteCargoCodigo: delegated ? input.delegatePositionCode?.trim() || null : null,
+        representanteCargo: delegated ? input.delegatePositionName?.trim() || null : null,
+        representanteUnidad: delegated ? input.delegateUnitName?.trim() || null : null,
+        decisionPorUsuarioId: actor.userId,
+        decisionPorNombre: actor.name,
+        decisionAt,
+        updatedAt: decisionAt,
+      })
+      .where(eq(agendaActividades.id, id))
+      .returning(),
+    db.insert(auditoria).values({
+      entidad: "agenda_actividad",
+      entidadId: id,
+      accion: delegated ? "designar_representante" : "confirmar_asistencia_alcalde",
+      detalle: {
+        anterior: mapActivity(previous),
+        asistencia: input.attendance,
+        representanteCargoCodigo: delegated ? input.delegatePositionCode : null,
+        representanteCargo: delegated ? input.delegatePositionName : null,
+        representanteUnidad: delegated ? input.delegateUnitName : null,
+        actorUserId: actor.userId,
+        actorName: actor.name,
+      },
+    }),
+  ] as const);
+  const [updated] = updatedRows;
+  if (!updated) return { item: null, reason: "not_found" };
+  return { item: mapActivity(updated), reason: null };
 }
 
 export async function deleteAgendaActivity(id: string, actor: AgendaActor) {

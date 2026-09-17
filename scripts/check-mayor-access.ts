@@ -4,7 +4,7 @@ import postgres from "postgres";
 config({ path: ".env.local", quiet: true });
 
 const expectedPermissions = [
-  "sigem.agenda.manage",
+  "sigem.agenda.decide",
   "sigem.agenda.read",
   "sigem.hr.read",
   "sigem.reports.read",

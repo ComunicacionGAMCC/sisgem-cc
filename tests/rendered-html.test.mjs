@@ -67,12 +67,13 @@ test("implements the complete auditable route workflow", async () => {
 });
 
 test("keeps municipal data lazy, protected, and ChatGPT Sites compatible", async () => {
-  const [page, agenda, agendaService, agendaApi, agendaActionApi, accessServer, medical, dbIndex, schema, orgMigration, listApi, trackingApi, medicalApi, hosting, municipalDate, dateHook, routeService] = await Promise.all([
+  const [page, agenda, agendaService, agendaApi, agendaActionApi, agendaAttendanceApi, accessServer, medical, dbIndex, schema, orgMigration, listApi, trackingApi, medicalApi, hosting, municipalDate, dateHook, routeService, agendaMigration] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/agenda.tsx", import.meta.url), "utf8"),
     readFile(new URL("../db/agenda.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/agenda/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/agenda/[id]/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/agenda/[id]/attendance/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/access-control.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/medical.tsx", import.meta.url), "utf8"),
     readFile(new URL("../db/index.ts", import.meta.url), "utf8"),
@@ -85,14 +86,15 @@ test("keeps municipal data lazy, protected, and ChatGPT Sites compatible", async
     readFile(new URL("../lib/municipal-date.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/use-municipal-date.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/hojas-ruta.ts", import.meta.url), "utf8"),
+    readFile(new URL("../drizzle/0010_cuddly_talos.sql", import.meta.url), "utf8"),
   ]);
 
   assert.match(page, /fetch\("\/api\/hojas-ruta"/);
   assert.match(page, /\/api\/seguimiento\//);
   assert.match(page, /UiIcon name="shield".*Acceso protegido/);
   assert.match(page, /profile\.fullName\.trim\(\)\.split/);
-  assert.match(page, /Buenos días, \{userName\}/);
-  assert.doesNotMatch(page, /Buenos días, Saúl/);
+  assert.match(page, /Hola, \{userName\}/);
+  assert.doesNotMatch(page, /Buenos días/);
   assert.match(municipalDate, /America\/La_Paz/);
   assert.match(dateHook, /setInterval\(refresh, 60_000\)/);
   assert.match(routeService, /getMunicipalYear\(\)/);
@@ -109,6 +111,8 @@ test("keeps municipal data lazy, protected, and ChatGPT Sites compatible", async
   assert.match(agenda, /hasAgenda/);
   assert.match(agenda, /Editar/);
   assert.match(agenda, /Confirmar/);
+  assert.match(agenda, /Designar representante/);
+  assert.match(agenda, /canDecideCabinetAgendaAttendance/);
   assert.match(agenda, /Cancelar/);
   assert.match(agenda, /Eliminar/);
   assert.match(agenda, /\/api\/agenda/);
@@ -121,6 +125,10 @@ test("keeps municipal data lazy, protected, and ChatGPT Sites compatible", async
   assert.match(agendaActionApi, /export async function PATCH/);
   assert.match(agendaActionApi, /export async function DELETE/);
   assert.match(agendaActionApi, /requireCabinetAgendaManagement\(context\)/);
+  assert.match(agendaAttendanceApi, /requireCabinetAgendaDecision\(context\)/);
+  assert.match(agendaAttendanceApi, /listarDelegadosAgendaActivos/);
+  assert.match(agendaService, /accion: delegated \? "designar_representante" : "confirmar_asistencia_alcalde"/);
+  assert.match(agendaMigration, /"asistencia" varchar\(30\) DEFAULT 'pendiente'/);
   assert.match(agendaService, /accion: "actualizar"/);
   assert.match(agendaService, /accion: "eliminar"/);
   assert.match(accessServer, /context\.profile\.jobTitle/);
@@ -240,7 +248,7 @@ test("implements database-backed procurement management", async () => {
 });
 
 test("enforces scoped institutional access with MFA and auditable roles", async () => {
-  const [page, accessUi, accessServer, userApi, managedUserApi, accessMigration, bootstrapMigration, managementMigration, mayorMigration, directAccessMigration, bootstrapScript] = await Promise.all([
+  const [page, accessUi, accessServer, userApi, managedUserApi, accessMigration, bootstrapMigration, managementMigration, mayorMigration, attendanceMigration, directAccessMigration, bootstrapScript] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/access.tsx", import.meta.url), "utf8"),
     readFile(new URL("../db/access-control.ts", import.meta.url), "utf8"),
@@ -260,6 +268,10 @@ test("enforces scoped institutional access with MFA and auditable roles", async 
     ),
     readFile(
       new URL("../supabase/migrations/20260911184500_mayor_readonly_agenda_role.sql", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../supabase/migrations/20260916223051_agenda_attendance_decisions.sql", import.meta.url),
       "utf8",
     ),
     readFile(
@@ -316,6 +328,9 @@ test("enforces scoped institutional access with MFA and auditable roles", async 
   assert.match(mayorMigration, /'sigem\.agenda\.manage'/);
   assert.match(mayorMigration, /'sigem\.routes\.read'/);
   assert.doesNotMatch(mayorMigration, /'sigem\.routes\.(?:create|receive|route|update|close)'/);
+  assert.match(attendanceMigration, /'sigem\.agenda\.decide'/);
+  assert.match(attendanceMigration, /permission\.code = 'sigem\.agenda\.manage'/);
+  assert.match(attendanceMigration, /'super_admin', 'sigem_admin', 'sigem_alcalde'/);
   assert.match(directAccessMigration, /mfa_exempt boolean not null default false/);
   assert.match(directAccessMigration, /johanbergenfriesen@gmail\.com/);
   assert.match(directAccessMigration, /\(not profile\.mfa_exempt\) and exists/);

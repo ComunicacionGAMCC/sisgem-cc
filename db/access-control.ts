@@ -103,12 +103,13 @@ export function hasCabinetAgendaAccess(context: AccessContext) {
   if (
     context.permissions.includes("sigem.agenda.read")
     || context.permissions.includes("sigem.agenda.manage")
+    || context.permissions.includes("sigem.agenda.decide")
     || context.permissions.includes("platform.users.manage")
     || context.permissions.includes("sigem.users.manage")
   ) return true;
 
   const hasSigemRole = context.roles.some((role) => role.module === "sigem");
-  if (hasSigemRole && /(secretar.*gabinete|chofer.*ejecutivo.*coordinador)/i.test(context.profile.jobTitle ?? "")) return true;
+  if (hasSigemRole && /(alcalde|secretar.*(?:gabinete|general)|chofer.*ejecutivo.*coordinador)/i.test(context.profile.jobTitle ?? "")) return true;
 
   return context.roles.some((role) => (
     role.module === "sigem"
@@ -125,7 +126,18 @@ export function hasCabinetAgendaManagement(context: AccessContext) {
   ) return true;
   const hasSigemRole = context.roles.some((role) => role.module === "sigem");
   return hasSigemRole
-    && /(secretar.*gabinete|chofer.*ejecutivo.*coordinador)/i.test(context.profile.jobTitle ?? "");
+    && /secretar.*(?:gabinete|general)/i.test(context.profile.jobTitle ?? "");
+}
+
+export function hasCabinetAgendaDecision(context: AccessContext) {
+  if (
+    context.permissions.includes("sigem.agenda.decide")
+    || context.permissions.includes("platform.users.manage")
+    || context.permissions.includes("sigem.users.manage")
+  ) return true;
+  const hasSigemRole = context.roles.some((role) => role.module === "sigem");
+  return hasSigemRole
+    && /(alcalde|chofer.*ejecutivo.*coordinador)/i.test(context.profile.jobTitle ?? "");
 }
 
 export function requireCabinetAgendaAccess(context: AccessContext) {
@@ -137,5 +149,11 @@ export function requireCabinetAgendaAccess(context: AccessContext) {
 export function requireCabinetAgendaManagement(context: AccessContext) {
   if (!hasCabinetAgendaManagement(context)) {
     throw new AccessDeniedError("Tu acceso a la agenda institucional es únicamente de lectura.");
+  }
+}
+
+export function requireCabinetAgendaDecision(context: AccessContext) {
+  if (!hasCabinetAgendaDecision(context)) {
+    throw new AccessDeniedError("No tienes permiso para decidir quién asistirá a esta actividad.");
   }
 }
