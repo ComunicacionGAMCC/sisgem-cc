@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useAccess } from "./access";
+import { UiIcon } from "./ui-icons";
 
 type Position = { id: number; code: string; name: string; employmentType: string; baseSalary: string; active: boolean; unitId: string; unitName: string };
 type Staff = { id: number; document: string; firstNames: string; lastNames: string; positionId: number; position: string; unit: string; employmentType: string; startDate: string; contractEndDate: string | null; email: string | null; phone: string | null; active: boolean };
@@ -31,6 +32,7 @@ export function HumanResourcesModule() {
   const [movingStaff, setMovingStaff] = useState<Staff | null>(null);
   const [selectedPayrollId, setSelectedPayrollId] = useState(0);
   const [discountLine, setDiscountLine] = useState<PayrollItem | null>(null);
+  const [staffSearch, setStaffSearch] = useState("");
   const canManage = access.hasPermission("sigem.hr.manage");
   const canPayroll = access.hasPermission("sigem.hr.payroll");
 
@@ -55,6 +57,19 @@ export function HumanResourcesModule() {
 
   const activeStaff = data?.staff.filter((item) => item.active) ?? [];
   const contractStaff = activeStaff.filter((item) => item.employmentType !== "planta");
+  const filteredStaff = useMemo(() => {
+    const term = staffSearch.trim().toLocaleLowerCase("es");
+    if (!term) return data?.staff ?? [];
+    return (data?.staff ?? []).filter((item) => [
+      item.firstNames,
+      item.lastNames,
+      `${item.firstNames} ${item.lastNames}`,
+      item.document,
+      item.position,
+      item.unit,
+      item.email ?? "",
+    ].some((value) => value.toLocaleLowerCase("es").includes(term)));
+  }, [data?.staff, staffSearch]);
   const selectedPayroll = data?.payrolls.find((item) => item.id === selectedPayrollId) ?? data?.payrolls[0];
   const currentPayrollItems = data?.payrollItems.filter((item) => item.payrollId === selectedPayroll?.id) ?? [];
   const units = useMemo(() => {
@@ -138,7 +153,7 @@ export function HumanResourcesModule() {
       {message && <p className="hrMessage" role="status">{message}</p>}
 
       {tab === "staff" && <div className="hrTwoColumns">
-        <section className="panel hrTablePanel"><header><div><span>PERSONAL DEL GAMCC</span><h3>Equipo institucional</h3></div><em>{data.staff.length} registros</em></header><div className="hrTable"><div className="hrRow header"><span>Servidor público</span><span>Cargo y área</span><span>Vínculo</span><span>Estado</span><span /></div>{data.staff.map((item) => <div className="hrRow" key={item.id}><span><strong>{item.firstNames} {item.lastNames}</strong><small>CI {item.document}</small></span><span><strong>{item.position}</strong><small>{item.unit}</small></span><span><i>{employmentLabels[item.employmentType]}</i><small>{item.contractEndDate ? `Hasta ${item.contractEndDate}` : `Desde ${item.startDate}`}</small></span><span><b className={item.active ? "statusOn" : "statusOff"}>{item.active ? "Activo" : "Inactivo"}</b></span><span>{canManage && <><button onClick={() => setMovingStaff(item)}>Cambiar cargo</button><button onClick={() => void action({ action: "set_staff_active", staffId: item.id, active: !item.active })}>{item.active ? "Dar de baja" : "Reactivar"}</button></>}</span></div>)}</div></section>
+        <section className="panel hrTablePanel"><header><div><span>PERSONAL DEL GAMCC</span><h3>Equipo institucional</h3></div><em>{filteredStaff.length} de {data.staff.length} registros</em></header><div className="hrStaffSearch"><UiIcon name="search" size={18} /><input value={staffSearch} onChange={(event) => setStaffSearch(event.target.value)} placeholder="Buscar por nombre, CI, cargo, área o correo" aria-label="Buscar personal" />{staffSearch && <button type="button" onClick={() => setStaffSearch("")}>Limpiar</button>}</div><div className="hrTable"><div className="hrRow header"><span>Servidor público</span><span>Cargo y área</span><span>Vínculo</span><span>Estado</span><span /></div>{filteredStaff.length ? filteredStaff.map((item) => <div className="hrRow" key={item.id}><span><strong>{item.firstNames} {item.lastNames}</strong><small>{item.document.startsWith("PENDIENTE-") ? "CI pendiente de registro" : `CI ${item.document}`}{item.email ? ` · ${item.email}` : ""}</small></span><span><strong>{item.position}</strong><small>{item.unit}</small></span><span><i>{employmentLabels[item.employmentType]}</i><small>{item.contractEndDate ? `Hasta ${item.contractEndDate}` : `Desde ${item.startDate}`}</small></span><span><b className={item.active ? "statusOn" : "statusOff"}>{item.active ? "Activo" : "Inactivo"}</b></span><span>{canManage && <><button onClick={() => setMovingStaff(item)}>Cambiar cargo</button><button onClick={() => void action({ action: "set_staff_active", staffId: item.id, active: !item.active })}>{item.active ? "Dar de baja" : "Reactivar"}</button></>}</span></div>) : <p className="hrEmpty">No se encontró personal con ese criterio.</p>}</div></section>
         {canManage && <section className="panel hrFormPanel"><header><span>NUEVO REGISTRO</span><h3>Incorporar personal</h3></header><form onSubmit={createStaff}><div className="formGrid"><label>Nombres<input name="firstNames" required /></label><label>Apellidos<input name="lastNames" required /></label><label>Cédula de identidad<input name="document" required /></label><label>Fecha de ingreso<input name="startDate" type="date" required /></label></div><label>Cargo<select name="positionId" required defaultValue=""><option value="" disabled>Seleccionar cargo</option>{data.positions.filter((item) => item.active).map((item) => <option key={item.id} value={item.id}>{item.name} · {item.unitName}</option>)}</select></label><div className="formGrid"><label>Fin de contrato<input name="contractEndDate" type="date" /></label><label>Teléfono<input name="phone" /></label></div><label>Correo institucional<input name="email" type="email" /></label><button className="primaryAction">Registrar personal</button></form></section>}
       </div>}
 

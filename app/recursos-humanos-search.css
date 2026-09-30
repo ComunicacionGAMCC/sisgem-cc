@@ -1,0 +1,33 @@
+.hrStaffSearch {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 14px 18px;
+  padding: 10px 12px;
+  border: 1px solid #d9e5db;
+  border-radius: 12px;
+  color: #3b7550;
+  background: #f8fbf8;
+}
+
+.hrStaffSearch input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  color: #244b31;
+  background: transparent;
+  font-size: 11px;
+}
+
+.hrStaffSearch input::placeholder { color: #87958b; }
+
+.hrStaffSearch button {
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 7px;
+  color: #2c6b40;
+  background: #e9f4e7;
+  font-size: 9px;
+  font-weight: 800;
+}
