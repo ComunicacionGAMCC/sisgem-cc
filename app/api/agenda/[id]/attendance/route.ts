@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import {
   decideAgendaAttendance,
   type AgendaAttendanceDecision,
@@ -9,6 +9,7 @@ import {
   requireCabinetAgendaDecision,
 } from "../../../../../db/access-control";
 import { listarDelegadosAgendaActivos } from "../../../../../db/unidades";
+import { notifyAgendaDelegate } from "../../../../../lib/agenda-notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -66,6 +67,15 @@ export async function PATCH(
         { error: "No se puede confirmar la asistencia a una actividad cancelada." },
         { status: 409 },
       );
+    }
+    if (result.item?.attendance === "designado") {
+      after(async () => {
+        try {
+          await notifyAgendaDelegate(result.item!);
+        } catch (error) {
+          console.error("No se pudo notificar al representante designado", error);
+        }
+      });
     }
     return NextResponse.json({ item: result.item });
   } catch (error) {

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { createAgendaActivity, listAgendaActivities, type NewAgendaActivity } from "../../../db/agenda";
 import { listarDelegadosAgendaActivos } from "../../../db/unidades";
 import {
@@ -7,6 +7,7 @@ import {
   requireCabinetAgendaAccess,
   requireCabinetAgendaManagement,
 } from "../../../db/access-control";
+import { notifyAgendaActivityCreated } from "../../../lib/agenda-notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +69,13 @@ export async function POST(request: NextRequest) {
       status: "tentativa",
       createdByUserId: context.profile.id,
       createdByName: context.profile.fullName,
+    });
+    after(async () => {
+      try {
+        await notifyAgendaActivityCreated(item);
+      } catch (error) {
+        console.error("No se pudieron enviar los avisos de la nueva actividad", error);
+      }
     });
     return NextResponse.json({ item }, { status: 201 });
   } catch (error) {

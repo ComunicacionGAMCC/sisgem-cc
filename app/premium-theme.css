@@ -447,6 +447,48 @@ textarea:focus-visible {
   margin-bottom: 12px;
 }
 
+.agendaTitleActions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.pushNotificationControl {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+}
+
+.pushNotificationControl.compact { display: inline-flex; }
+.pushNotificationControl.compact .pushButton { min-height: 42px; white-space: nowrap; }
+
+.pushButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 42px;
+  padding: 10px 14px;
+  border: 1px solid #cddfd2;
+  border-radius: 12px;
+  background: #fff;
+  color: #174d32;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.pushButton.active {
+  border-color: #b7dcae;
+  background: #eff9ec;
+  color: #1f713f;
+}
+
+.pushButton:disabled { opacity: .65; cursor: wait; }
+.pushMessage, .pushNoticeHint { max-width: 250px; color: #65746b; font-size: 9px; text-align: right; }
+.pushMessage.error, .pushNoticeHint.denied { color: #a83b3b; }
+
 .agendaDateToolbar label {
   display: flex;
   flex-direction: column;

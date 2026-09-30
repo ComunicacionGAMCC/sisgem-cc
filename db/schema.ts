@@ -288,6 +288,54 @@ export const agendaActividades = pgTable(
   ],
 );
 
+export const notificacionesDispositivos = pgTable(
+  "notificaciones_dispositivos",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    usuarioId: uuid("usuario_id").notNull(),
+    endpoint: text("endpoint").notNull(),
+    claveP256dh: text("clave_p256dh").notNull(),
+    claveAuth: text("clave_auth").notNull(),
+    nombreCompleto: varchar("nombre_completo", { length: 220 }).notNull(),
+    cargo: varchar("cargo", { length: 240 }),
+    roles: jsonb("roles").$type<string[]>().default([]).notNull(),
+    activo: boolean("activo").default(true).notNull(),
+    ultimoAccesoAt: timestamp("ultimo_acceso_at", { withTimezone: true }).defaultNow().notNull(),
+    ...auditColumns,
+  },
+  (table) => [
+    uniqueIndex("notificaciones_dispositivos_endpoint_uidx").on(table.endpoint),
+    index("notificaciones_dispositivos_usuario_idx").on(table.usuarioId, table.activo),
+  ],
+);
+
+export const notificacionesEntregas = pgTable(
+  "notificaciones_entregas",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    dispositivoId: uuid("dispositivo_id")
+      .notNull()
+      .references(() => notificacionesDispositivos.id, { onDelete: "cascade" }),
+    actividadId: uuid("actividad_id").references(() => agendaActividades.id, { onDelete: "cascade" }),
+    claveUnica: varchar("clave_unica", { length: 260 }).notNull(),
+    tipo: varchar("tipo", { length: 40 }).notNull(),
+    estado: varchar("estado", { length: 20 }).default("procesando").notNull(),
+    programadaAt: timestamp("programada_at", { withTimezone: true }),
+    enviadaAt: timestamp("enviada_at", { withTimezone: true }),
+    error: text("error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("notificaciones_entregas_clave_uidx").on(table.claveUnica),
+    index("notificaciones_entregas_actividad_idx").on(table.actividadId, table.tipo),
+    check(
+      "notificaciones_entregas_estado_check",
+      sql`${table.estado} in ('procesando', 'enviada', 'fallida')`,
+    ),
+  ],
+);
+
 export const rrhhCargos = pgTable(
   "rrhh_cargos",
   {

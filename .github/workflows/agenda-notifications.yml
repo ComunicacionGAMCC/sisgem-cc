@@ -1,0 +1,25 @@
+name: Recordatorios de agenda
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: agenda-notifications
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Procesar recordatorios pendientes
+        env:
+          AGENDA_CRON_SECRET: ${{ secrets.AGENDA_CRON_SECRET }}
+        run: |
+          test -n "$AGENDA_CRON_SECRET"
+          curl --fail-with-body --silent --show-error \
+            --retry 2 \
+            --header "Authorization: Bearer $AGENDA_CRON_SECRET" \
+            https://sisgem-cc.vercel.app/api/cron/agenda-notifications

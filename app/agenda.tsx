@@ -66,7 +66,7 @@ export function canAccessCabinetAgenda(context: AgendaAccessContext | null | und
     || context.permissions.includes("sigem.users.manage")
   ) return true;
   const hasSigemRole = context.roles.some((role) => role.module === "sigem");
-  if (hasSigemRole && /(alcalde|secretar.*(?:gabinete|general)|chofer.*ejecutivo.*coordinador)/i.test(context.profile.jobTitle ?? "")) return true;
+  if (hasSigemRole && /(alcalde|secretar.*(?:gabinete|general)|secretari[oa] municipal|chofer.*ejecutivo.*coordinador)/i.test(context.profile.jobTitle ?? "")) return true;
 
   return context.roles.some((role) => (
     role.module === "sigem"
