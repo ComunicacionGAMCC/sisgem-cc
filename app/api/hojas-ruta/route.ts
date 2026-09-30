@@ -4,6 +4,7 @@ import {
   listarHojasDeRuta,
   type FiltroHojas,
   type NuevaHojaRuta,
+  type TipoHojaRuta,
 } from "../../../db/hojas-ruta";
 import {
   AccessDeniedError,
@@ -12,6 +13,12 @@ import {
 } from "../../../db/access-control";
 
 export const dynamic = "force-dynamic";
+
+const tiposPermitidos = new Set<TipoHojaRuta>([
+  "solicitud_externa",
+  "solicitud_audiencia",
+  "comunicacion_interna",
+]);
 
 export async function GET(request: NextRequest) {
   try {
@@ -46,15 +53,29 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
+    const tipo = body.tipo ?? "solicitud_externa";
+    if (!tiposPermitidos.has(tipo)) {
+      return NextResponse.json({ error: "Selecciona un tipo de solicitud válido." }, { status: 400 });
+    }
+    const esComunicacionInterna = tipo === "comunicacion_interna";
+    if (!esComunicacionInterna && !body.telefono?.trim()) {
+      return NextResponse.json(
+        { error: "El número de teléfono es obligatorio para solicitudes externas y de audiencia." },
+        { status: 400 },
+      );
+    }
+    if (!esComunicacionInterna && body.email?.trim() && !/^\S+@\S+\.\S+$/.test(body.email.trim())) {
+      return NextResponse.json({ error: "El correo electrónico no es válido." }, { status: 400 });
+    }
 
     const item = await crearHojaDeRuta({
       remitente: body.remitente,
       consignatario: body.consignatario,
       asunto: body.asunto,
-      tipo: body.tipo,
+      tipo,
       prioridad: body.prioridad,
-      telefono: body.telefono,
-      email: body.email,
+      telefono: esComunicacionInterna ? undefined : body.telefono,
+      email: esComunicacionInterna ? undefined : body.email,
     }, {
       userId: context.profile.id,
       name: context.profile.fullName,

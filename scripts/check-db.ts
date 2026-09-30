@@ -21,6 +21,7 @@ const creada = await crearHojaDeRuta({
   remitente: "Validación automatizada SIGEM",
   consignatario: "Alcalde Municipal",
   asunto: "Comprobación temporal del flujo de creación",
+  telefono: "70000000",
   prioridad: "normal",
 });
 

@@ -9,6 +9,7 @@ export type RouteItem = {
   id?: string;
   code: string;
   title: string;
+  type?: "solicitud_externa" | "solicitud_audiencia" | "comunicacion_interna";
   consignee?: string | null;
   description?: string | null;
   sender: string;
@@ -71,6 +72,7 @@ function preferredAction(state: string | undefined, hasPermission: (permission: 
 }
 
 function RoutePrintSheet({ route, qrDataUrl }: { route: RouteDetail; qrDataUrl: string }) {
+  const isInternalCommunication = route.type === "comunicacion_interna";
   const initialReception = [...route.events]
     .reverse()
     .find((event) => /solicitud (?:recibida|registrada)|recepci[oó]n/i.test(event.title));
@@ -81,7 +83,7 @@ function RoutePrintSheet({ route, qrDataUrl }: { route: RouteDetail; qrDataUrl: 
     <header className="routePrintHeader">
       <div className="routePrintBrand"><img src="/marca-cuatro-canadas.png" alt="Gobierno Autónomo Municipal de Cuatro Cañadas" /></div>
       <div className="routePrintTitle"><span>GOBIERNO AUTÓNOMO MUNICIPAL DE CUATRO CAÑADAS</span><h1>HOJA DE RUTA</h1><strong>{route.code}</strong></div>
-      <div className="routePrintQr">{qrDataUrl ? <img src={qrDataUrl} alt={`QR de seguimiento ${route.code}`} /> : <span>QR</span>}<small>SEGUIMIENTO DIGITAL</small></div>
+      <div className={`routePrintQr${isInternalCommunication ? " internal" : ""}`}>{isInternalCommunication ? <span>USO<br />INTERNO</span> : qrDataUrl ? <img src={qrDataUrl} alt={`QR de seguimiento ${route.code}`} /> : <span>QR</span>}<small>{isInternalCommunication ? "ACCESO GAMCC" : "SEGUIMIENTO DIGITAL"}</small></div>
     </header>
 
     <section className="routePrintData">
@@ -105,7 +107,7 @@ function RoutePrintSheet({ route, qrDataUrl }: { route: RouteDetail; qrDataUrl: 
       </div>)}
     </section>
 
-    <footer className="routePrintFooter"><span>{route.code} · Documento de circulación interna</span><span>Escanee el QR para consultar el estado público del trámite</span></footer>
+    <footer className="routePrintFooter"><span>{route.code} · Documento de circulación interna</span><span>{isInternalCommunication ? "Expediente restringido a usuarios autorizados del GAMCC" : "Escanee el QR para consultar el estado público del trámite"}</span></footer>
   </article>;
 }
 
@@ -132,13 +134,16 @@ export function RouteWorkflowPanel({
   const [generatedQr, setGeneratedQr] = useState<{ code: string; dataUrl: string } | null>(null);
   const token = access.session?.access_token ?? "";
   const selectedCode = selected?.code;
-  const qrDataUrl = generatedQr && generatedQr.code === selectedCode ? generatedQr.dataUrl : "";
+  const selectedIsInternal = selected?.type === "comunicacion_interna";
+  const qrDataUrl = !selectedIsInternal && generatedQr && generatedQr.code === selectedCode ? generatedQr.dataUrl : "";
   const porRecibir = allRoutes.filter((route) => route.state === "derivado").length;
   const porDerivar = allRoutes.filter((route) => activeForDerivation.has(route.state ?? "")).length;
 
   useEffect(() => {
     let active = true;
-    if (!selectedCode) return () => { active = false; };
+    if (!selectedCode || selectedIsInternal) {
+      return () => { active = false; };
+    }
     const trackingUrl = `${window.location.origin}/?codigo=${encodeURIComponent(selectedCode)}#seguimiento`;
     QRCode.toDataURL(trackingUrl, {
       width: 360,
@@ -147,7 +152,7 @@ export function RouteWorkflowPanel({
       color: { dark: "#123f2a", light: "#ffffff" },
     }).then((value) => { if (active) setGeneratedQr({ code: selectedCode, dataUrl: value }); }).catch(() => undefined);
     return () => { active = false; };
-  }, [selectedCode]);
+  }, [selectedCode, selectedIsInternal]);
 
   async function openDetail(id?: string) {
     if (!id) return;
@@ -288,7 +293,7 @@ export function RouteWorkflowPanel({
 
     {detailLoading && <div className="modalBackdrop"><section className="routeModal"><p className="loadingState">Abriendo expediente…</p></section></div>}
     {selected && <div className="modalBackdrop routeDetailBackdrop no-print" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelected(null); }}><section className="routeDetail" role="dialog" aria-modal="true" aria-labelledby="route-detail-title">
-      <header className="routeDetailHeader"><div><span>{selected.code}</span><h2 id="route-detail-title">{selected.title}</h2><p>{selected.sender} · {currentUnit}</p></div><div className="routeDetailHeaderActions"><button className="routePrintButton" onClick={() => window.print()} disabled={!qrDataUrl}><UiIcon name="document" size={17} />{qrDataUrl ? "Imprimir hoja" : "Preparando QR…"}</button><button onClick={() => setSelected(null)} aria-label="Cerrar expediente">×</button></div></header>
+      <header className="routeDetailHeader"><div><span>{selected.code}</span><h2 id="route-detail-title">{selected.title}</h2><p>{selected.sender} · {currentUnit}</p></div><div className="routeDetailHeaderActions"><button className="routePrintButton" onClick={() => window.print()} disabled={!selectedIsInternal && !qrDataUrl}><UiIcon name="document" size={17} />{selectedIsInternal || qrDataUrl ? "Imprimir hoja" : "Preparando QR…"}</button><button onClick={() => setSelected(null)} aria-label="Cerrar expediente">×</button></div></header>
       <div className="routeSummary"><span className={selected.tone}>{selected.status}</span><div><small>Consignatario</small><strong>{selected.consignee || "No consignado"}</strong></div><div><small>Plazo</small><strong>{selected.due}</strong></div><div><small>Prioridad</small><strong>{selected.priority || "Normal"}</strong></div><div><small>Registrado</small><strong>{prettyDate(selected.createdAt)}</strong></div></div>
       {selected.description && <p className="routeDescription">{selected.description}</p>}
       {notice && <p className="formSuccess" role="status">{notice}</p>}
@@ -297,9 +302,9 @@ export function RouteWorkflowPanel({
         <div>
           <section className="routeSection"><div className="routeSectionTitle"><div><span>RECORRIDO</span><h3>Recepciones y derivaciones</h3></div><b>{selected.derivations.length} movimiento{selected.derivations.length === 1 ? "" : "s"}</b></div>{selected.derivations.length ? <div className="routeHandoffs">{selected.derivations.map((movement, index) => <article key={movement.id}><span>{selected.derivations.length - index}</span><div><strong>{movement.originUnit || "Secretaría General"} <b>→</b> {movement.destinationUnit}</strong><small>Derivada: {prettyDate(movement.derivedAt)}{movement.receivedAt ? ` · Recibida: ${prettyDate(movement.receivedAt)}` : ""}</small>{movement.note && <p>{movement.note}</p>}</div><em className={movement.state}>{derivationStateLabel(movement.state)}</em></article>)}</div> : <p className="emptyState">Registrada en Secretaría General. Pendiente de revisión y orden para su primera derivación.</p>}</section>
           <section className="routeSection"><h3>Historial del trámite</h3><div className="routeTimeline">{selected.events.map((item) => <article key={item.id}><i /><div><strong>{item.title}</strong><span>{prettyDate(item.createdAt)}{item.actorName ? ` · ${item.actorName}` : ""}</span>{item.description && <p>{item.description}</p>}<small>{item.unit || "Sistema"} · {item.public ? "Visible al ciudadano" : "Uso interno"}</small></div></article>)}</div></section>
-          <section className="routeSection"><h3>Documentos adjuntos</h3>{selected.attachments.length ? <div className="attachmentList">{selected.attachments.map((file) => <button key={file.id} onClick={() => downloadAttachment(file)}><span><UiIcon name="document" size={18} /></span><div><strong>{file.name}</strong><small>{Math.ceil(file.size / 1024)} KB · {file.public ? "Público" : "Interno"}</small></div><b>Descargar</b></button>)}</div> : <p className="emptyState">Aún no hay documentos adjuntos.</p>}{canWork && access.hasPermission("sigem.routes.update") ? <form className="attachmentForm" onSubmit={uploadAttachment}><input type="file" name="file" required accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" /><label><input type="checkbox" name="public" /> Visible en seguimiento ciudadano</label><button className="primaryAction" disabled={submitting}>Adjuntar</button></form> : null}</section>
+          <section className="routeSection"><h3>Documentos adjuntos</h3>{selected.attachments.length ? <div className="attachmentList">{selected.attachments.map((file) => <button key={file.id} onClick={() => downloadAttachment(file)}><span><UiIcon name="document" size={18} /></span><div><strong>{file.name}</strong><small>{Math.ceil(file.size / 1024)} KB · {file.public ? "Público" : "Interno"}</small></div><b>Descargar</b></button>)}</div> : <p className="emptyState">Aún no hay documentos adjuntos.</p>}{canWork && access.hasPermission("sigem.routes.update") ? <form className="attachmentForm" onSubmit={uploadAttachment}><input type="file" name="file" required accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" />{!selectedIsInternal && <label><input type="checkbox" name="public" /> Visible en seguimiento ciudadano</label>}<button className="primaryAction" disabled={submitting}>Adjuntar</button></form> : null}</section>
         </div>
-        <aside className="routeActions"><div className="routeActionHeading"><span>{state === "derivado" ? "PASO 1" : isInitialReview ? "REVISIÓN Y ORDEN" : activeForDerivation.has(state) ? "PASO 2" : "EXPEDIENTE"}</span><h3>{actionTitle}</h3><p>{action === "receive" ? "Confirma que tu unidad tiene físicamente la documentación." : action === "derive" ? isInitialReview ? "Deriva únicamente después de que el alcalde o el Secretario Municipal indiquen el destino y la instrucción en la hoja física." : "Selecciona el siguiente destino e indica la instrucción." : "Registra la actuación realizada sobre el trámite."}</p></div>{allowedActions.length ? <form onSubmit={submitAction}>{allowedActions.length > 1 && <label>Operación<select value={action} onChange={(event) => setAction(event.target.value)}>{allowedActions.map((item) => <option value={item.value} key={item.value}>{item.label}</option>)}</select></label>}{action === "derive" && <label>Unidad de destino<select name="destinationUnitId" required defaultValue=""><option value="" disabled>Selecciona una unidad</option>{selected.units.filter((unit) => unit.id !== selected.currentUnitId).map((unit) => <option value={unit.id} key={unit.id}>{unit.name}</option>)}</select></label>}{action === "deadline" && <label>Nueva fecha límite<input name="dueAt" type="date" required /></label>}<label>{action === "derive" ? "Instrucción" : action === "receive" ? "Observación (opcional)" : "Detalle"}<textarea name="description" rows={4} required={descriptionRequired} minLength={descriptionRequired ? 5 : undefined} placeholder={action === "derive" ? "Ej.: Proceder, emitir informe y seguir trámite" : action === "receive" ? "Estado de la documentación recibida" : "Describe la actuación, instrucción o resultado"} /></label>{!["receive", "derive", "deadline", "archive", "reopen"].includes(action) && <label className="inlineCheck"><input type="checkbox" name="public" defaultChecked={action === "close"} /> Mostrar este movimiento al ciudadano</label>}<button className="primaryAction routeSubmitAction" disabled={submitting}>{submitting ? "Guardando…" : action === "receive" ? "Confirmar recepción" : action === "derive" ? isInitialReview ? "Registrar primera derivación →" : "Derivar trámite →" : "Guardar movimiento"}</button></form> : <p className="emptyState">{hasCurrentUnitAccess ? "No hay acciones disponibles para este estado." : "Este expediente ya está en otra unidad. Puedes consultar su historial, pero solamente la unidad actual puede modificarlo."}</p>}<button className="routeSecondaryPrint" onClick={() => window.print()} disabled={!qrDataUrl}>▤ Imprimir hoja física con QR</button><div className="routeContact"><h4>Datos del remitente</h4><span>{selected.sender}</span>{selected.senderPhone && <span>Teléfono: {selected.senderPhone}</span>}{selected.senderEmail && <span>{selected.senderEmail}</span>}</div></aside>
+        <aside className="routeActions"><div className="routeActionHeading"><span>{state === "derivado" ? "PASO 1" : isInitialReview ? "REVISIÓN Y ORDEN" : activeForDerivation.has(state) ? "PASO 2" : "EXPEDIENTE"}</span><h3>{actionTitle}</h3><p>{action === "receive" ? "Confirma que tu unidad tiene físicamente la documentación." : action === "derive" ? isInitialReview ? "Deriva únicamente después de que el alcalde o el Secretario Municipal indiquen el destino y la instrucción en la hoja física." : "Selecciona el siguiente destino e indica la instrucción." : "Registra la actuación realizada sobre el trámite."}</p></div>{allowedActions.length ? <form onSubmit={submitAction}>{allowedActions.length > 1 && <label>Operación<select value={action} onChange={(event) => setAction(event.target.value)}>{allowedActions.map((item) => <option value={item.value} key={item.value}>{item.label}</option>)}</select></label>}{action === "derive" && <label>Unidad de destino<select name="destinationUnitId" required defaultValue=""><option value="" disabled>Selecciona una unidad</option>{selected.units.filter((unit) => unit.id !== selected.currentUnitId).map((unit) => <option value={unit.id} key={unit.id}>{unit.name}</option>)}</select></label>}{action === "deadline" && <label>Nueva fecha límite<input name="dueAt" type="date" required /></label>}<label>{action === "derive" ? "Instrucción" : action === "receive" ? "Observación (opcional)" : "Detalle"}<textarea name="description" rows={4} required={descriptionRequired} minLength={descriptionRequired ? 5 : undefined} placeholder={action === "derive" ? "Ej.: Proceder, emitir informe y seguir trámite" : action === "receive" ? "Estado de la documentación recibida" : "Describe la actuación, instrucción o resultado"} /></label>{!selectedIsInternal && !["receive", "derive", "deadline", "archive", "reopen"].includes(action) && <label className="inlineCheck"><input type="checkbox" name="public" defaultChecked={action === "close"} /> Mostrar este movimiento al ciudadano</label>}<button className="primaryAction routeSubmitAction" disabled={submitting}>{submitting ? "Guardando…" : action === "receive" ? "Confirmar recepción" : action === "derive" ? isInitialReview ? "Registrar primera derivación →" : "Derivar trámite →" : "Guardar movimiento"}</button></form> : <p className="emptyState">{hasCurrentUnitAccess ? "No hay acciones disponibles para este estado." : "Este expediente ya está en otra unidad. Puedes consultar su historial, pero solamente la unidad actual puede modificarlo."}</p>}<button className="routeSecondaryPrint" onClick={() => window.print()} disabled={!selectedIsInternal && !qrDataUrl}>▤ {selectedIsInternal ? "Imprimir hoja física interna" : "Imprimir hoja física con QR"}</button><div className="routeContact"><h4>{selectedIsInternal ? "Origen interno" : "Datos del remitente"}</h4><span>{selected.sender}</span>{selected.senderPhone && <span>Teléfono: {selected.senderPhone}</span>}{selected.senderEmail && <span>{selected.senderEmail}</span>}</div></aside>
       </div>
       <RoutePrintSheet route={selected} qrDataUrl={qrDataUrl} />
     </section></div>}
@@ -310,6 +315,8 @@ export function RouteCreateModal({ mode, close, succeed, createdCode }: { mode: 
   const access = useAccess();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [requestType, setRequestType] = useState<RouteItem["type"]>("solicitud_externa");
+  const isInternalCommunication = requestType === "comunicacion_interna";
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -333,7 +340,7 @@ export function RouteCreateModal({ mode, close, succeed, createdCode }: { mode: 
       if (file instanceof File && file.size > 0) {
         const upload = new FormData();
         upload.set("file", file);
-        if (form.get("filePublic") === "on") upload.set("public", "true");
+        if (!isInternalCommunication) upload.set("public", "true");
         const uploadResponse = await fetch(`/api/hojas-ruta/${data.item.id}/adjuntos`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: upload });
         const uploadData = (await uploadResponse.json()) as { error?: string };
         if (!uploadResponse.ok) throw new Error(`La hoja fue creada, pero el adjunto falló: ${uploadData.error || "revisa el archivo"}.`);
@@ -348,6 +355,32 @@ export function RouteCreateModal({ mode, close, succeed, createdCode }: { mode: 
 
   return <div className="modalBackdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) close(); }}>
     {mode === "success" ? <section className="routeModal successModal" role="dialog" aria-modal="true" aria-labelledby="success-title"><div className="successMark">✓</div><h2 id="success-title">Hoja de ruta registrada</h2><p>Se creó el expediente <strong>{createdCode}</strong> en Secretaría General. Quedó <b>listo para derivar</b> después de la revisión y orden del alcalde o del Secretario Municipal.</p><button className="primaryAction" onClick={close}>Ver pendientes de derivar</button></section>
-      : <form className="routeModal" onSubmit={submit} role="dialog" aria-modal="true" aria-labelledby="route-title"><header className="modalHeader"><div><span>SECRETARÍA GENERAL · REGISTRO</span><h2 id="route-title">Nueva hoja de ruta</h2><p>Registra la solicitud sin derivarla. La fecha, hora, código y responsable se guardan automáticamente.</p></div><button type="button" onClick={close} aria-label="Cerrar">×</button></header><label>Remitente<input name="remitente" required maxLength={220} placeholder="Nombre de la persona o institución" /></label><div className="formGrid"><label>Número de contacto<input name="telefono" maxLength={40} placeholder="Teléfono o celular" /></label><label>Correo electrónico (opcional)<input name="email" type="email" maxLength={180} placeholder="correo@ejemplo.com" /></label></div><label>Consignatario<input name="consignatario" required maxLength={220} placeholder="Ej.: Alcalde Municipal o Secretario Municipal" /><small className="fieldHelp">Indica a quién está dirigida la solicitud; esto no genera una derivación.</small></label><label>Asunto<input name="asunto" required maxLength={300} placeholder="Resumen principal del trámite" /></label><div className="formGrid"><label>Tipo<select name="tipo" defaultValue="solicitud_externa"><option value="solicitud_externa">Solicitud externa</option><option value="comunicacion_interna">Comunicación interna</option><option value="solicitud_audiencia">Solicitud de audiencia</option></select></label><label>Prioridad<select name="prioridad" defaultValue="normal"><option value="baja">Baja</option><option value="normal">Normal</option><option value="alta">Alta</option><option value="urgente">Urgente</option></select></label></div><label>Documento inicial (opcional)<input name="file" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" /></label><label className="inlineCheck"><input type="checkbox" name="filePublic" /> Visible para el ciudadano durante el seguimiento</label><p className="routeRegistrationNote"><b>Al registrar:</b> quedará en Secretaría General, pendiente de revisión. La primera derivación se hará después desde la bandeja <strong>Derivar</strong>.</p>{error && <p className="formError" role="alert">{error}</p>}<div className="modalActions"><button type="button" onClick={close}>Cancelar</button><button className="primaryAction" type="submit" disabled={submitting}>{submitting ? "Registrando…" : "Registrar hoja de ruta →"}</button></div></form>}
+      : <form className="routeModal" onSubmit={submit} role="dialog" aria-modal="true" aria-labelledby="route-title">
+        <header className="modalHeader"><div><span>SECRETARÍA GENERAL · REGISTRO</span><h2 id="route-title">Nueva hoja de ruta</h2><p>Primero selecciona el tipo de documento. El formulario y la visibilidad se configuran automáticamente.</p></div><button type="button" onClick={close} aria-label="Cerrar">×</button></header>
+
+        <fieldset className="routeTypePicker">
+          <legend>Tipo de solicitud</legend>
+          <div>
+            <div className={`routeTypeOption ${requestType === "solicitud_externa" ? "selected" : ""}`}><input id="route-type-external" type="radio" name="tipo" value="solicitud_externa" checked={requestType === "solicitud_externa"} onChange={() => setRequestType("solicitud_externa")} /><label htmlFor="route-type-external"><strong>Solicitud externa</strong><small>Trámite presentado por una persona o institución</small></label></div>
+            <div className={`routeTypeOption ${requestType === "solicitud_audiencia" ? "selected" : ""}`}><input id="route-type-audience" type="radio" name="tipo" value="solicitud_audiencia" checked={requestType === "solicitud_audiencia"} onChange={() => setRequestType("solicitud_audiencia")} /><label htmlFor="route-type-audience"><strong>Solicitud de audiencia</strong><small>Pedido de reunión o atención con una autoridad</small></label></div>
+            <div className={`routeTypeOption ${requestType === "comunicacion_interna" ? "selected" : ""}`}><input id="route-type-internal" type="radio" name="tipo" value="comunicacion_interna" checked={requestType === "comunicacion_interna"} onChange={() => setRequestType("comunicacion_interna")} /><label htmlFor="route-type-internal"><strong>Comunicación interna</strong><small>Documento exclusivo para servidores públicos del GAMCC</small></label></div>
+          </div>
+        </fieldset>
+
+        <p className={`routeVisibilityNotice ${isInternalCommunication ? "internal" : "public"}`}>
+          <UiIcon name={isInternalCommunication ? "lock" : "external"} size={17} />
+          <span>{isInternalCommunication ? <><strong>Uso interno.</strong> No aparecerá en el seguimiento público y sus documentos permanecerán restringidos a usuarios autorizados del GAMCC.</> : <><strong>Seguimiento ciudadano automático.</strong> El trámite y su documento inicial podrán consultarse mediante el código de seguimiento.</>}</span>
+        </p>
+
+        <label>{isInternalCommunication ? "Unidad o servidor remitente" : "Remitente"}<input name="remitente" required maxLength={220} placeholder={isInternalCommunication ? "Nombre del área o servidor público" : "Nombre de la persona o institución"} /></label>
+        {!isInternalCommunication && <div className="formGrid"><label>Número de teléfono<input name="telefono" required maxLength={40} inputMode="tel" placeholder="Teléfono o celular" /></label><label>Correo electrónico (opcional)<input name="email" type="email" maxLength={180} placeholder="correo@ejemplo.com" /></label></div>}
+        <label>Consignatario<input name="consignatario" required maxLength={220} placeholder="Ej.: Alcalde Municipal o Secretario Municipal" /><small className="fieldHelp">Indica a quién está dirigido el documento; esto no genera una derivación.</small></label>
+        <label>Asunto<input name="asunto" required maxLength={300} placeholder="Resumen principal del trámite" /></label>
+        <label>Prioridad<select name="prioridad" defaultValue="normal"><option value="baja">Baja</option><option value="normal">Normal</option><option value="alta">Alta</option><option value="urgente">Urgente</option></select></label>
+        <label>Documento inicial (opcional)<input name="file" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" /></label>
+        <p className="routeRegistrationNote"><b>Al registrar:</b> quedará en Secretaría General, pendiente de revisión. La primera derivación se hará después desde la bandeja <strong>Derivar</strong>.</p>
+        {error && <p className="formError" role="alert">{error}</p>}
+        <div className="modalActions"><button type="button" onClick={close}>Cancelar</button><button className="primaryAction" type="submit" disabled={submitting}>{submitting ? "Registrando…" : "Registrar hoja de ruta →"}</button></div>
+      </form>}
   </div>;
 }

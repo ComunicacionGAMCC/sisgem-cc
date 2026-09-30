@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, ilike, inArray, notInArray, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, ne, notInArray, or, sql } from "drizzle-orm";
 import { getMunicipalYear } from "../lib/municipal-date";
 import { getDb } from "./index";
 import {
@@ -13,12 +13,13 @@ import {
 } from "./schema";
 
 export type FiltroHojas = "todos" | "pendientes" | "finalizados";
+export type TipoHojaRuta = "solicitud_externa" | "solicitud_audiencia" | "comunicacion_interna";
 
 export type NuevaHojaRuta = {
   remitente: string;
   consignatario: string;
   asunto: string;
-  tipo?: string;
+  tipo?: TipoHojaRuta;
   prioridad?: "baja" | "normal" | "alta" | "urgente";
   telefono?: string;
   email?: string;
@@ -108,6 +109,7 @@ export async function listarHojasDeRuta({
       id: hojasDeRuta.id,
       code: hojasDeRuta.codigo,
       title: hojasDeRuta.asunto,
+      type: hojasDeRuta.tipo,
       consignee: hojasDeRuta.consignatario,
       description: hojasDeRuta.descripcion,
       sender: solicitantes.nombre,
@@ -153,7 +155,10 @@ export async function obtenerSeguimiento(codigo: string) {
     .from(hojasDeRuta)
     .innerJoin(solicitantes, eq(hojasDeRuta.solicitanteId, solicitantes.id))
     .innerJoin(unidades, eq(hojasDeRuta.unidadActualId, unidades.id))
-    .where(eq(hojasDeRuta.codigo, codigo.trim().toUpperCase()))
+    .where(and(
+      eq(hojasDeRuta.codigo, codigo.trim().toUpperCase()),
+      ne(hojasDeRuta.tipo, "comunicacion_interna"),
+    ))
     .limit(1);
 
   if (!hoja) return null;
@@ -208,6 +213,7 @@ export async function obtenerAdjuntoPublico(codigo: string, attachmentId: string
     eq(hojasDeRuta.id, hojasRutaAdjuntos.hojaRutaId),
   ).where(and(
     eq(hojasDeRuta.codigo, codigo.trim().toUpperCase()),
+    ne(hojasDeRuta.tipo, "comunicacion_interna"),
     eq(hojasRutaAdjuntos.id, attachmentId),
     eq(hojasRutaAdjuntos.publico, true),
   )).limit(1);
@@ -235,6 +241,11 @@ async function siguienteCodigo() {
 
 export async function crearHojaDeRuta(input: NuevaHojaRuta, actor?: ActorHojaRuta) {
   const db = getDb();
+  const tipo: TipoHojaRuta = input.tipo ?? "solicitud_externa";
+  const esComunicacionInterna = tipo === "comunicacion_interna";
+  if (!esComunicacionInterna && !input.telefono?.trim()) {
+    throw new Error("El número de teléfono es obligatorio para solicitudes externas y de audiencia.");
+  }
   const [secretariaGeneral] = await db
     .select()
     .from(unidades)
@@ -249,8 +260,8 @@ export async function crearHojaDeRuta(input: NuevaHojaRuta, actor?: ActorHojaRut
     tipo: "persona" as const,
     nombre: input.remitente.trim(),
     documento: null,
-    telefono: input.telefono?.trim() || null,
-    email: input.email?.trim() || null,
+    telefono: esComunicacionInterna ? null : input.telefono?.trim() || null,
+    email: esComunicacionInterna ? null : input.email?.trim() || null,
   };
   const [solicitante] = await db.insert(solicitantes).values(datosSolicitante).returning();
 
@@ -263,7 +274,7 @@ export async function crearHojaDeRuta(input: NuevaHojaRuta, actor?: ActorHojaRut
     .insert(hojasDeRuta)
     .values({
       codigo,
-      tipo: input.tipo?.trim() || "solicitud_externa",
+      tipo,
       consignatario: input.consignatario.trim(),
       asunto: input.asunto.trim(),
       prioridad: input.prioridad ?? "normal",
@@ -284,7 +295,7 @@ export async function crearHojaDeRuta(input: NuevaHojaRuta, actor?: ActorHojaRut
     funcionarioId: null,
     actorUsuarioId: actor?.userId ?? null,
     actorNombre: actor?.name ?? null,
-    publico: true,
+    publico: !esComunicacionInterna,
   });
 
   await db.insert(auditoria).values({
@@ -302,7 +313,7 @@ export async function crearHojaDeRuta(input: NuevaHojaRuta, actor?: ActorHojaRut
     },
   });
 
-  return obtenerSeguimiento(codigo);
+  return obtenerDetalleHojaRuta(hoja.id, null);
 }
 
 async function verificarAccesoHojaRuta(
@@ -312,7 +323,7 @@ async function verificarAccesoHojaRuta(
 ) {
   const db = getDb();
   const [hoja] = await db
-    .select({ id: hojasDeRuta.id, state: hojasDeRuta.estado, currentUnitId: hojasDeRuta.unidadActualId })
+    .select({ id: hojasDeRuta.id, type: hojasDeRuta.tipo, state: hojasDeRuta.estado, currentUnitId: hojasDeRuta.unidadActualId })
     .from(hojasDeRuta)
     .where(eq(hojasDeRuta.id, hojaRutaId))
     .limit(1);
@@ -409,6 +420,7 @@ export async function obtenerDetalleHojaRuta(hojaRutaId: string, unidadIds: stri
     units: unidadesMunicipales,
     events: eventos.map((event) => ({
       ...event,
+      public: hoja.type !== "comunicacion_interna" && event.public,
       status: estadoEtiquetas[event.state],
       unit: event.unitId ? unitNames.get(event.unitId) ?? null : null,
       createdAt: event.createdAt.toISOString(),
@@ -422,7 +434,11 @@ export async function obtenerDetalleHojaRuta(hojaRutaId: string, unidadIds: stri
       derivedAt: movement.derivadoAt.toISOString(),
       receivedAt: movement.recibidoAt?.toISOString() ?? null,
     })),
-    attachments: adjuntos.map((attachment) => ({ ...attachment, createdAt: attachment.createdAt.toISOString() })),
+    attachments: adjuntos.map((attachment) => ({
+      ...attachment,
+      public: hoja.type !== "comunicacion_interna" && attachment.public,
+      createdAt: attachment.createdAt.toISOString(),
+    })),
   };
 }
 
@@ -574,6 +590,7 @@ export async function gestionarHojaRuta(
       eventPublic = false;
     }
 
+    eventPublic = hoja.type !== "comunicacion_interna" && eventPublic;
     await tx.insert(eventosSeguimiento).values({
       hojaRutaId,
       estado: eventState,
@@ -608,6 +625,7 @@ export async function guardarAdjuntoHojaRuta(input: {
   const hoja = await verificarAccesoHojaRuta(input.hojaRutaId, input.unitIds, true);
   if (hoja.state === "archivado") throw new Error("No se pueden agregar documentos a un expediente archivado.");
   const db = getDb();
+  const attachmentPublic = hoja.type !== "comunicacion_interna" && input.public;
   const tx = db;
   {
     const [event] = await tx.insert(eventosSeguimiento).values({
@@ -618,7 +636,7 @@ export async function guardarAdjuntoHojaRuta(input: {
       unidadId: hoja.currentUnitId,
       actorUsuarioId: input.actor.userId,
       actorNombre: input.actor.name,
-      publico: input.public,
+      publico: attachmentPublic,
     }).returning({ id: eventosSeguimiento.id });
     const [attachment] = await tx.insert(hojasRutaAdjuntos).values({
       hojaRutaId: input.hojaRutaId,
@@ -628,7 +646,7 @@ export async function guardarAdjuntoHojaRuta(input: {
       tamanoBytes: input.size,
       sha256: input.sha256,
       contenidoBase64: input.base64,
-      publico: input.public,
+      publico: attachmentPublic,
       subidoPorUsuarioId: input.actor.userId,
       subidoPorNombre: input.actor.name,
     }).returning({ id: hojasRutaAdjuntos.id });

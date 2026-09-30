@@ -26,7 +26,7 @@ let routeId = "";
 let applicantId = "";
 let attachmentId = "";
 try {
-  const created = await crearHojaDeRuta({ remitente: sender, consignatario: "Alcalde Municipal", asunto: "Validación integral temporal" }, actor);
+  const created = await crearHojaDeRuta({ remitente: sender, consignatario: "Alcalde Municipal", asunto: "Validación integral temporal", telefono: "70000000" }, actor);
   if (!created) throw new Error("No se pudo crear el expediente temporal.");
   routeId = created.id;
   const [row] = await db.select({

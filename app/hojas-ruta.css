@@ -129,6 +129,27 @@
 .fieldHelp { color: #7a887f; font-size: .66rem; font-weight: 500; line-height: 1.45; }
 .routeRegistrationNote { margin: 0 0 15px; padding: 12px 14px; border: 1px solid #d8e7d6; border-left: 4px solid #d3ae24; border-radius: 11px; color: #496052; background: #f6faf3; font-size: .72rem; line-height: 1.55; }
 .routeRegistrationNote b, .routeRegistrationNote strong { color: #1b653b; }
+.routeTypePicker { margin: 0 0 16px; padding: 0; border: 0; }
+.routeTypePicker legend { margin-bottom: 8px; color: #334b3d; font-size: .68rem; font-weight: 900; }
+.routeTypePicker > div { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.routeTypeOption { position: relative; display: flex; min-height: 86px; border: 1px solid #dce7de; border-radius: 13px; color: #405348; background: #fbfdfb; transition: border-color .18s ease, background .18s ease, box-shadow .18s ease; }
+.routeTypeOption:hover { border-color: #9fc7a8; }
+.routeTypeOption.selected { border-color: #2c8a51; background: #eef8ed; box-shadow: 0 0 0 2px #2c8a5114; }
+.routeTypePicker input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.routeTypeOption label { display: flex; flex: 1; flex-direction: column; gap: 5px; padding: 12px; cursor: pointer; }
+.routeTypePicker strong { color: #17482f; font-size: .7rem; line-height: 1.2; }
+.routeTypePicker small { color: #738179; font-size: .59rem; font-weight: 500; line-height: 1.4; }
+.routeVisibilityNotice { display: flex; align-items: flex-start; gap: 10px; margin: 0 0 17px; padding: 11px 13px; border: 1px solid; border-radius: 11px; font-size: .67rem; line-height: 1.5; }
+.routeVisibilityNotice svg { flex: none; margin-top: 1px; }
+.routeVisibilityNotice span { color: inherit; }
+.routeVisibilityNotice.public { color: #24613d; border-color: #cce4cf; background: #f1f9ef; }
+.routeVisibilityNotice.internal { color: #68551d; border-color: #eadca9; background: #fff9e8; }
+.routePrintQr.internal > span { color: #1d6740; font-size: 8.5pt; font-weight: 900; line-height: 1.05; text-align: center; }
+
+@media (max-width: 640px) {
+  .routeTypePicker > div { grid-template-columns: 1fr; }
+  .routeTypeOption { min-height: 0; }
+}
 
 .routePrintSheet { display: none; }
 

@@ -44,9 +44,10 @@ test("server-renders the Municipio Digital portal", async () => {
 });
 
 test("implements the complete auditable route workflow", async () => {
-  const [ui, service, actionApi, attachmentApi, publicAttachmentApi, schema, migration] = await Promise.all([
+  const [ui, service, listApi, actionApi, attachmentApi, publicAttachmentApi, schema, migration] = await Promise.all([
     readFile(new URL("../app/hojas-ruta.tsx", import.meta.url), "utf8"),
     readFile(new URL("../db/hojas-ruta.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/hojas-ruta/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/hojas-ruta/[id]/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/hojas-ruta/[id]/adjuntos/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/seguimiento/[codigo]/adjuntos/[attachmentId]/route.ts", import.meta.url), "utf8"),
@@ -59,6 +60,14 @@ test("implements the complete auditable route workflow", async () => {
   assert.match(ui, /Historial del trámite/);
   assert.match(ui, /Documentos adjuntos/);
   assert.match(ui, /Visible en seguimiento ciudadano/);
+  assert.match(ui, /Tipo de solicitud/);
+  assert.match(ui, /requestType === "comunicacion_interna"/);
+  assert.match(ui, /!isInternalCommunication && <div className="formGrid">/);
+  assert.doesNotMatch(ui, /name="filePublic"/);
+  assert.match(listApi, /El número de teléfono es obligatorio para solicitudes externas y de audiencia/);
+  assert.match(service, /ne\(hojasDeRuta\.tipo, "comunicacion_interna"\)/);
+  assert.match(service, /eventPublic = hoja\.type !== "comunicacion_interna" && eventPublic/);
+  assert.match(service, /attachmentPublic = hoja\.type !== "comunicacion_interna" && input\.public/);
   assert.match(actionApi, /authorizeRequest/);
   assert.match(attachmentApi, /maximumSize = 3 \* 1024 \* 1024/);
   assert.match(publicAttachmentApi, /obtenerAdjuntoPublico/);
