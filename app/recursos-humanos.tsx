@@ -4,11 +4,12 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useAccess } from "./access";
 import { UiIcon } from "./ui-icons";
 
-type Position = { id: number; code: string; name: string; employmentType: string; baseSalary: string; active: boolean; unitId: string; unitName: string };
+type Position = { id: number; code: string; name: string; employmentType: string; baseSalary: string; active: boolean; unitId: string; unitName: string; salaryLevel: number | null; salaryCategory: string | null; salaryScaleYear: number | null };
 type Staff = { id: number; document: string; firstNames: string; lastNames: string; positionId: number; position: string; unit: string; employmentType: string; startDate: string; contractEndDate: string | null; email: string | null; phone: string | null; active: boolean };
 type Payroll = { id: number; gestion: number; mes: number; estado: string; totalGanado: string; totalDescuentos: string; totalLiquido: string };
 type PayrollItem = { id: number; payrollId: number; staffId: number; firstNames: string; lastNames: string; position: string; baseSalary: string; bonuses: string; grossPay: string; deductions: string; netPay: string };
-type HrData = { positions: Position[]; staff: Staff[]; payrolls: Payroll[]; payrollItems: PayrollItem[]; discounts: Array<{ id: number; planillaItemId: number; concepto: string; tipo: string; monto: string }> };
+type SalaryScale = { id: number; year: number; category: string; level: number; denomination: string; itemCount: number; baseSalary: string; monthlyCost: string; entityCode: string; sourceCode: string; fundingOrganizationCode: string; active: boolean };
+type HrData = { positions: Position[]; staff: Staff[]; payrolls: Payroll[]; payrollItems: PayrollItem[]; discounts: Array<{ id: number; planillaItemId: number; concepto: string; tipo: string; monto: string }>; salaryScale: SalaryScale[] };
 
 const employmentLabels: Record<string, string> = {
   planta: "Personal de planta",
@@ -24,7 +25,7 @@ function bolivianos(value: string | number) {
 export function HumanResourcesModule() {
   const access = useAccess();
   const [data, setData] = useState<HrData | null>(null);
-  const [tab, setTab] = useState<"staff" | "positions" | "payroll">("staff");
+  const [tab, setTab] = useState<"staff" | "positions" | "scale" | "payroll">("staff");
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [refresh, setRefresh] = useState(0);
@@ -57,6 +58,10 @@ export function HumanResourcesModule() {
 
   const activeStaff = data?.staff.filter((item) => item.active) ?? [];
   const contractStaff = activeStaff.filter((item) => item.employmentType !== "planta");
+  const currentScaleYear = data?.salaryScale[0]?.year ?? 0;
+  const currentSalaryScale = data?.salaryScale.filter((item) => item.year === currentScaleYear) ?? [];
+  const approvedItems = currentSalaryScale.reduce((total, item) => total + item.itemCount, 0);
+  const approvedMonthlyCost = currentSalaryScale.reduce((total, item) => total + Number(item.monthlyCost), 0);
   const filteredStaff = useMemo(() => {
     const term = staffSearch.trim().toLocaleLowerCase("es");
     if (!term) return data?.staff ?? [];
@@ -147,9 +152,9 @@ export function HumanResourcesModule() {
 
   return (
     <section className="hrModule moduleView">
-      <div className="hrHero"><div><span>RECURSOS HUMANOS · GAMCC</span><h2>Estructura y planillas</h2><p>Gestión laboral, movimientos y control salarial.</p></div><div className="hrHeroBadge"><b>{activeStaff.length}</b><span>personas activas<small>{contractStaff.length} contratos o consultorías</small></span></div></div>
-      <div className="hrStats"><article><span>Personal activo</span><strong>{activeStaff.length}</strong><small>Planta y contratos</small></article><article><span>Cargos habilitados</span><strong>{data.positions.filter((item) => item.active).length}</strong><small>Catálogo institucional</small></article><article><span>Contratos vigentes</span><strong>{contractStaff.length}</strong><small>Consultores y eventuales</small></article><article><span>Última planilla</span><strong>{selectedPayroll ? `${monthNames[selectedPayroll.mes]} ${selectedPayroll.gestion}` : "—"}</strong><small>{selectedPayroll?.estado || "Sin generar"}</small></article></div>
-      <nav className="hrTabs"><button className={tab === "staff" ? "active" : ""} onClick={() => setTab("staff")}>Planilla de personal</button><button className={tab === "positions" ? "active" : ""} onClick={() => setTab("positions")}>Cargos y contratos</button><button className={tab === "payroll" ? "active" : ""} onClick={() => setTab("payroll")}>Sueldos y salarios</button></nav>
+      <div className="hrHero"><div><span>RECURSOS HUMANOS · GAMCC</span><h2>Estructura y planillas</h2><p>Organigrama institucional 2027 y escala salarial oficial 2026.</p></div><div className="hrHeroBadge"><b>{approvedItems}</b><span>ítems aprobados<small>{activeStaff.length} personas registradas · {contractStaff.length} contratos</small></span></div></div>
+      <div className="hrStats"><article><span>Personal registrado</span><strong>{activeStaff.length}</strong><small>Servidores activos</small></article><article><span>Ítems aprobados</span><strong>{approvedItems}</strong><small>Escala {currentScaleYear || "—"}</small></article><article><span>Cargos habilitados</span><strong>{data.positions.filter((item) => item.active).length}</strong><small>Organigrama 2027</small></article><article><span>Costo mensual aprobado</span><strong>{bolivianos(approvedMonthlyCost)}</strong><small>Escala salarial {currentScaleYear || "—"}</small></article><article><span>Última planilla</span><strong>{selectedPayroll ? `${monthNames[selectedPayroll.mes]} ${selectedPayroll.gestion}` : "—"}</strong><small>{selectedPayroll?.estado || "Sin generar"}</small></article></div>
+      <nav className="hrTabs"><button className={tab === "staff" ? "active" : ""} onClick={() => setTab("staff")}>Planilla de personal</button><button className={tab === "positions" ? "active" : ""} onClick={() => setTab("positions")}>Organigrama y cargos</button><button className={tab === "scale" ? "active" : ""} onClick={() => setTab("scale")}>Escala salarial</button><button className={tab === "payroll" ? "active" : ""} onClick={() => setTab("payroll")}>Sueldos y descuentos</button></nav>
       {message && <p className="hrMessage" role="status">{message}</p>}
 
       {tab === "staff" && <div className="hrTwoColumns">
@@ -158,9 +163,14 @@ export function HumanResourcesModule() {
       </div>}
 
       {tab === "positions" && <div className="hrTwoColumns">
-        <section className="panel hrTablePanel"><header><div><span>ESTRUCTURA LABORAL</span><h3>Cargos de planta y contractuales</h3></div></header><div className="hrPositionList">{data.positions.map((item) => <article key={item.id}><div><strong>{item.name}</strong><small>{item.code} · {item.unitName}</small></div><span>{employmentLabels[item.employmentType]}</span><b>{bolivianos(item.baseSalary)}</b>{canManage && <button onClick={() => setEditingPosition(item)}>Editar</button>}</article>)}</div></section>
+        <section className="panel hrTablePanel"><header><div><span>ESTRUCTURA LABORAL 2027</span><h3>Cargos de planta y contractuales</h3></div></header><div className="hrPositionList">{data.positions.map((item) => <article key={item.id}><div><strong>{item.name}</strong><small>{item.code} · {item.unitName}{item.salaryLevel ? ` · Nivel ${item.salaryLevel} (${item.salaryScaleYear})` : ""}</small></div><span>{item.salaryCategory || employmentLabels[item.employmentType]}</span><b>{bolivianos(item.baseSalary)}</b>{canManage && <button onClick={() => setEditingPosition(item)}>Editar</button>}</article>)}</div></section>
         {canManage && <section className="panel hrFormPanel"><header><span>{editingPosition ? "EDITAR CARGO" : "NUEVO CARGO"}</span><h3>{editingPosition ? editingPosition.name : "Contrato o consultoría"}</h3></header><form key={editingPosition?.id ?? "new"} onSubmit={savePosition}><label>Código<input name="code" defaultValue={editingPosition?.code} disabled={Boolean(editingPosition)} required /></label><label>Nombre del cargo<input name="name" defaultValue={editingPosition?.name} required /></label><label>Área<select name="unitId" defaultValue={editingPosition?.unitId} required>{units.map((unit) => <option key={unit.id} value={unit.id}>{unit.name}</option>)}</select></label><label>Tipo de vínculo<select name="employmentType" defaultValue={editingPosition?.employmentType || "consultor_linea"}><option value="planta">Personal de planta</option><option value="consultor_linea">Consultor individual de línea</option><option value="contrato">Personal de contrato</option></select></label><label>Haber básico mensual<input name="baseSalary" type="number" min="0" step="0.01" defaultValue={editingPosition?.baseSalary || "0"} required /></label>{editingPosition && <label>Estado<select name="active" defaultValue={String(editingPosition.active)}><option value="true">Activo</option><option value="false">Desactivado</option></select></label>}<div className="hrFormActions">{editingPosition && <button type="button" onClick={() => setEditingPosition(null)}>Cancelar</button>}<button className="primaryAction">{editingPosition ? "Guardar cambios" : "Crear cargo"}</button></div></form></section>}
       </div>}
+
+      {tab === "scale" && <section className="panel hrSalaryScalePanel">
+        <header><div><span>ESCALA SALARIAL · GESTIÓN {currentScaleYear}</span><h3>Ítems y haberes básicos aprobados</h3><p>Entidad 1755 · Fuente 41 Transferencias TGN · Organismo financiador 113 Coparticipación Tributaria</p></div><div><strong>{approvedItems} ítems</strong><small>{bolivianos(approvedMonthlyCost)} mensual · {bolivianos(approvedMonthlyCost * 12)} anual</small></div></header>
+        <div className="hrScaleTable"><div className="hrScaleRow header"><span>Nivel</span><span>Categoría</span><span>Denominación del puesto</span><span>Ítems</span><span>Haber básico</span><span>Costo mensual</span></div>{currentSalaryScale.map((item) => <div className="hrScaleRow" key={item.id}><span>{item.level}º</span><span>{item.category}</span><span><strong>{item.denomination}</strong></span><span>{item.itemCount}</span><span>{bolivianos(item.baseSalary)}</span><span>{bolivianos(item.monthlyCost)}</span></div>)}<div className="hrScaleRow totals"><span /><span /><span><strong>TOTALES APROBADOS</strong></span><span>{approvedItems}</span><span /><span>{bolivianos(approvedMonthlyCost)}</span></div></div>
+      </section>}
 
       {tab === "payroll" && <div className="hrPayrollLayout">
         <section className="panel hrPayrollSummary"><header><div><span>PLANILLA SALARIAL</span><h3>Haberes y descuentos</h3></div>{data.payrolls.length > 0 && <select value={selectedPayroll?.id || 0} onChange={(event) => setSelectedPayrollId(Number(event.target.value))}>{data.payrolls.map((item) => <option value={item.id} key={item.id}>{monthNames[item.mes]} {item.gestion}</option>)}</select>}</header>{selectedPayroll ? <div className="payrollTotals"><article><span>Total ganado</span><strong>{bolivianos(selectedPayroll.totalGanado)}</strong></article><article><span>Descuentos</span><strong>{bolivianos(selectedPayroll.totalDescuentos)}</strong></article><article><span>Líquido pagable</span><strong>{bolivianos(selectedPayroll.totalLiquido)}</strong></article></div> : <p className="hrEmpty">Todavía no se generó una planilla.</p>}<div className="hrTable payroll"><div className="payrollRow header"><span>Personal</span><span>Haber básico</span><span>Descuentos</span><span>Líquido</span><span /></div>{currentPayrollItems.map((item) => <div className="payrollRow" key={item.id}><span><strong>{item.firstNames} {item.lastNames}</strong><small>{item.position}</small></span><span>{bolivianos(item.baseSalary)}</span><span className="deduction">− {bolivianos(item.deductions)}</span><span className="netPay">{bolivianos(item.netPay)}</span><span>{canPayroll && <button onClick={() => setDiscountLine(item)}>Registrar descuento</button>}</span></div>)}</div></section>

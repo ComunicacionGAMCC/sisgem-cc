@@ -15,8 +15,9 @@ const [position] = await db.select({ id: rrhhCargos.id, name: rrhhCargos.nombre,
 const [staff] = await db.select({ firstNames: rrhhPersonal.nombres, lastNames: rrhhPersonal.apellidos, email: rrhhPersonal.email })
   .from(rrhhPersonal).where(eq(rrhhPersonal.email, "mel.2512@gmail.com")).limit(1);
 
-if (!unit || unit.name !== "Dirección Administrativa de Salud") throw new Error("La unidad administrativa de Salud no quedó registrada.");
-if (!position || position.name !== "Directora Administrativa Hospital Municipal") throw new Error("El cargo de Melvi no quedó registrado.");
+if (!unit || unit.name !== "Dirección Administrativa Municipal de Salud") throw new Error("La unidad administrativa de Salud no quedó registrada.");
+if (!position || position.name !== "Director Administrativo Municipal de Salud") throw new Error("El cargo de Melvi no quedó registrado.");
+if (Number(position.salary) !== 7948) throw new Error("El haber básico de Dirección Administrativa Municipal de Salud no coincide con la escala 2026.");
 if (!staff || `${staff.firstNames} ${staff.lastNames}` !== "Melvi Romero") throw new Error("Melvi no quedó incorporada a Recursos Humanos.");
 
 const [procurement, hr] = await Promise.all([listarContrataciones(), obtenerPanelRecursosHumanos()]);

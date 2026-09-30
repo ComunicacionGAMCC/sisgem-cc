@@ -3,6 +3,7 @@ import { getDb } from "./index";
 import {
   rrhhCargos,
   rrhhDescuentos,
+  rrhhEscalasSalariales,
   rrhhMovimientosCargo,
   rrhhPersonal,
   rrhhPlanillaItems,
@@ -14,7 +15,7 @@ export type RrhhAuditActor = { id: string; name: string };
 
 export async function obtenerPanelRecursosHumanos() {
   const db = getDb();
-  const [positions, staff, movements, payrolls, payrollItems, discounts] = await Promise.all([
+  const [positions, staff, movements, payrolls, payrollItems, discounts, salaryScale] = await Promise.all([
     db.select({
       id: rrhhCargos.id,
       code: rrhhCargos.codigo,
@@ -24,7 +25,13 @@ export async function obtenerPanelRecursosHumanos() {
       active: rrhhCargos.activo,
       unitId: unidades.id,
       unitName: unidades.nombre,
-    }).from(rrhhCargos).innerJoin(unidades, eq(unidades.id, rrhhCargos.unidadId)).orderBy(asc(unidades.nombre), asc(rrhhCargos.nombre)),
+      salaryLevel: rrhhEscalasSalariales.nivel,
+      salaryCategory: rrhhEscalasSalariales.categoria,
+      salaryScaleYear: rrhhEscalasSalariales.gestion,
+    }).from(rrhhCargos)
+      .innerJoin(unidades, eq(unidades.id, rrhhCargos.unidadId))
+      .leftJoin(rrhhEscalasSalariales, eq(rrhhEscalasSalariales.id, rrhhCargos.escalaSalarialId))
+      .orderBy(asc(unidades.nombre), asc(rrhhCargos.nombre)),
     db.select({
       id: rrhhPersonal.id,
       document: rrhhPersonal.documento,
@@ -63,9 +70,25 @@ export async function obtenerPanelRecursosHumanos() {
       .innerJoin(rrhhCargos, eq(rrhhCargos.id, rrhhPersonal.cargoId))
       .orderBy(asc(rrhhPersonal.apellidos), asc(rrhhPersonal.nombres)),
     db.select().from(rrhhDescuentos).orderBy(desc(rrhhDescuentos.createdAt)),
+    db.select({
+      id: rrhhEscalasSalariales.id,
+      year: rrhhEscalasSalariales.gestion,
+      category: rrhhEscalasSalariales.categoria,
+      level: rrhhEscalasSalariales.nivel,
+      denomination: rrhhEscalasSalariales.denominacion,
+      itemCount: rrhhEscalasSalariales.numeroItems,
+      baseSalary: rrhhEscalasSalariales.haberBasico,
+      monthlyCost: rrhhEscalasSalariales.costoMensual,
+      entityCode: rrhhEscalasSalariales.entidadCodigo,
+      sourceCode: rrhhEscalasSalariales.fuenteCodigo,
+      fundingOrganizationCode: rrhhEscalasSalariales.organismoFinanciadorCodigo,
+      active: rrhhEscalasSalariales.activa,
+    }).from(rrhhEscalasSalariales)
+      .where(eq(rrhhEscalasSalariales.activa, true))
+      .orderBy(desc(rrhhEscalasSalariales.gestion), asc(rrhhEscalasSalariales.nivel)),
   ]);
 
-  return { positions, staff, movements, payrolls, payrollItems, discounts };
+  return { positions, staff, movements, payrolls, payrollItems, discounts, salaryScale };
 }
 
 export async function crearCargoRrhh(input: {

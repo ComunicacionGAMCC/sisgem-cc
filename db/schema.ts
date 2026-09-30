@@ -336,6 +336,32 @@ export const notificacionesEntregas = pgTable(
   ],
 );
 
+export const rrhhEscalasSalariales = pgTable(
+  "rrhh_escalas_salariales",
+  {
+    id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+    gestion: integer("gestion").notNull(),
+    categoria: varchar("categoria", { length: 40 }).notNull(),
+    nivel: integer("nivel").notNull(),
+    denominacion: varchar("denominacion", { length: 180 }).notNull(),
+    numeroItems: integer("numero_items").notNull(),
+    haberBasico: numeric("haber_basico", { precision: 14, scale: 2 }).notNull(),
+    costoMensual: numeric("costo_mensual", { precision: 16, scale: 2 }).notNull(),
+    entidadCodigo: varchar("entidad_codigo", { length: 20 }).notNull(),
+    fuenteCodigo: varchar("fuente_codigo", { length: 20 }).notNull(),
+    organismoFinanciadorCodigo: varchar("organismo_financiador_codigo", { length: 20 }).notNull(),
+    activa: boolean("activa").default(true).notNull(),
+    ...auditColumns,
+  },
+  (table) => [
+    uniqueIndex("rrhh_escalas_gestion_nivel_uidx").on(table.gestion, table.nivel),
+    index("rrhh_escalas_gestion_activa_idx").on(table.gestion, table.activa),
+    check("rrhh_escalas_nivel_check", sql`${table.nivel} between 1 and 15`),
+    check("rrhh_escalas_items_check", sql`${table.numeroItems} > 0`),
+    check("rrhh_escalas_montos_check", sql`${table.haberBasico} >= 0 and ${table.costoMensual} >= 0`),
+  ],
+);
+
 export const rrhhCargos = pgTable(
   "rrhh_cargos",
   {
@@ -343,6 +369,7 @@ export const rrhhCargos = pgTable(
     codigo: varchar("codigo", { length: 40 }).notNull(),
     unidadId: uuid("unidad_id").notNull().references(() => unidades.id, { onDelete: "restrict" }),
     cargoOrganigramaId: integer("cargo_organigrama_id").references(() => cargosOrganigrama.id, { onDelete: "set null" }),
+    escalaSalarialId: integer("escala_salarial_id").references(() => rrhhEscalasSalariales.id, { onDelete: "set null" }),
     nombre: varchar("nombre", { length: 240 }).notNull(),
     tipoVinculacion: varchar("tipo_vinculacion", { length: 30 }).notNull(),
     haberBasico: numeric("haber_basico", { precision: 14, scale: 2 }).default("0").notNull(),
@@ -352,6 +379,7 @@ export const rrhhCargos = pgTable(
   (table) => [
     uniqueIndex("rrhh_cargos_codigo_uidx").on(table.codigo),
     index("rrhh_cargos_unidad_activo_idx").on(table.unidadId, table.activo),
+    index("rrhh_cargos_escala_idx").on(table.escalaSalarialId),
     check("rrhh_cargos_tipo_check", sql`${table.tipoVinculacion} in ('planta', 'consultor_linea', 'contrato')`),
     check("rrhh_cargos_haber_check", sql`${table.haberBasico} >= 0`),
   ],
