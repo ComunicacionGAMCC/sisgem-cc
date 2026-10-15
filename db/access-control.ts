@@ -126,7 +126,7 @@ export function hasCabinetAgendaManagement(context: AccessContext) {
   ) return true;
   const hasSigemRole = context.roles.some((role) => role.module === "sigem");
   return hasSigemRole
-    && /secretar.*(?:gabinete|general)/i.test(context.profile.jobTitle ?? "");
+    && /(alcalde|secretar.*(?:gabinete|general)|chofer.*coordinador)/i.test(context.profile.jobTitle ?? "");
 }
 
 export function hasCabinetAgendaDecision(context: AccessContext) {
@@ -137,7 +137,7 @@ export function hasCabinetAgendaDecision(context: AccessContext) {
   ) return true;
   const hasSigemRole = context.roles.some((role) => role.module === "sigem");
   return hasSigemRole
-    && /(alcalde|chofer.*ejecutivo.*coordinador)/i.test(context.profile.jobTitle ?? "");
+    && /(alcalde|secretar.*(?:gabinete|general)|chofer.*coordinador)/i.test(context.profile.jobTitle ?? "");
 }
 
 export function requireCabinetAgendaAccess(context: AccessContext) {

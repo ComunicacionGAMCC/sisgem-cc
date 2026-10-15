@@ -83,7 +83,7 @@ export function canManageCabinetAgenda(context: AgendaAccessContext | null | und
     || context.permissions.includes("sigem.users.manage")
   ) return true;
   return context.roles.some((role) => role.module === "sigem")
-    && /secretar.*(?:gabinete|general)/i.test(context.profile.jobTitle ?? "");
+    && /(alcalde|secretar.*(?:gabinete|general)|chofer.*coordinador)/i.test(context.profile.jobTitle ?? "");
 }
 
 export function canDecideCabinetAgendaAttendance(context: AgendaAccessContext | null | undefined) {
@@ -94,7 +94,7 @@ export function canDecideCabinetAgendaAttendance(context: AgendaAccessContext | 
     || context.permissions.includes("sigem.users.manage")
   ) return true;
   return context.roles.some((role) => role.module === "sigem")
-    && /(alcalde|chofer.*ejecutivo.*coordinador)/i.test(context.profile.jobTitle ?? "");
+    && /(alcalde|secretar.*(?:gabinete|general)|chofer.*coordinador)/i.test(context.profile.jobTitle ?? "");
 }
 
 function useAgendaActivities(from: string, to = from) {
@@ -394,7 +394,7 @@ export function AgendaModule({ today }: { today: Date | null }) {
   return (
     <section className="moduleView">
       <div className="moduleTitle">
-        <div><span className="moduleEyebrow">PROGRAMACIÓN</span><h2>Calendario de actividades</h2><p>Secretaría General programa; el alcalde o su coordinador confirman quién asistirá.</p></div>
+        <div><span className="moduleEyebrow">PROGRAMACIÓN</span><h2>Calendario de actividades</h2><p>El alcalde, Secretaría General y el chofer coordinador gestionan las actividades, confirman asistencia y designan representantes.</p></div>
         {canManage ? <button className="primaryAction" onClick={openNewActivity}><UiIcon name="plus" size={17} />Nueva actividad</button> : null}
       </div>
       <div className="agendaDateToolbar">
