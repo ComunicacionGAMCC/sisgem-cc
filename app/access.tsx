@@ -8,8 +8,10 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
+import { UiIcon } from "./ui-icons";
 
 const supabaseUrl =
   process.env.NEXT_PUBLIC_HEALTH_SUPABASE_URL ??
@@ -412,6 +414,19 @@ export function AccessManagement() {
   const [editingPositionCode, setEditingPositionCode] = useState("");
   const [userActionLoading, setUserActionLoading] = useState(false);
   const [userActionMessage, setUserActionMessage] = useState("");
+  const [createUserOpen, setCreateUserOpen] = useState(false);
+  const [directorySearch, setDirectorySearch] = useState("");
+  const createUserNameRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!createUserOpen) return;
+    createUserNameRef.current?.focus();
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setCreateUserOpen(false);
+    }
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [createUserOpen]);
 
   const canManageSigem = access.hasPermission("sigem.users.manage");
   const canManagePlatform = access.hasPermission("platform.users.manage");
@@ -509,6 +524,7 @@ export function AccessManagement() {
     event.currentTarget.reset();
     setUnitId("");
     setPositionCode("");
+    setCreateUserOpen(false);
     setLoading(true);
     setRefreshIndex((value) => value + 1);
   }
@@ -634,18 +650,45 @@ export function AccessManagement() {
 
   const selectedIsSuperAdmin = selectedUser?.roles.some((role) => role.code === "super_admin") ?? false;
   const selectedIsCurrentUser = selectedUser?.id === access.context?.profile.id;
+  const activeUsers = users.filter((user) => user.active).length;
+  const searchTerm = directorySearch.trim().toLocaleLowerCase("es");
+  const visibleUsers = searchTerm
+    ? users.filter((user) => [user.fullName, user.email, user.jobTitle ?? "", ...user.roles.map((role) => `${role.name} ${role.scopeLabel ?? ""}`)]
+      .some((value) => value.toLocaleLowerCase("es").includes(searchTerm)))
+    : users;
 
   return (
     <div className="accessModule moduleView">
       <section className="accessModuleHero">
-        <div><span>CONTROL DE IDENTIDADES</span><h2>Directorio y permisos</h2><p>Accesos definidos según función y área.</p></div>
-        <div className="accessSecurityBadge"><b>2FA</b><span>Seguridad reforzada<small>Administración auditada</small></span></div>
+        <div className="accessHeroCopy"><span>GESTIÓN DE ACCESOS</span><h2>Directorio institucional</h2><p>Consulta las cuentas del municipio y administra sus funciones y áreas desde un solo lugar.</p></div>
+        <button className="accessCreateButton" type="button" onClick={() => { setMessage(""); setCreateUserOpen(true); }}><UiIcon name="plus" size={18} /> Crear usuario</button>
       </section>
-      <div className="accessModuleGrid">
-        <section className="panel accessInvitePanel">
-          <header><span>NUEVO ACCESO</span><h3>Crear usuario</h3><p>Define sus credenciales y asigna el rol y área que le corresponden.</p></header>
+      {message && !createUserOpen && <p className="accessMessage" role="status">{message}</p>}
+      <section className="panel accessUsersPanel accessDirectoryPanel">
+        <header className="accessDirectoryHeader">
+          <div><span>CUENTAS MUNICIPALES</span><h3>Usuarios del sistema</h3><p>{users.length} registrados · {activeUsers} activos</p></div>
+          <label className="accessDirectorySearch"><UiIcon name="search" size={18} /><input type="search" value={directorySearch} onChange={(event) => setDirectorySearch(event.target.value)} placeholder="Buscar nombre, correo, cargo o área" aria-label="Buscar usuarios" /></label>
+        </header>
+        <div className="accessDirectoryColumns" aria-hidden="true"><span>Usuario</span><span>Cargo y permisos</span><span>Estado</span><span>Acciones</span></div>
+        {loading && <p className="accessEmpty">Cargando directorio…</p>}
+        {!loading && visibleUsers.map((user) => (
+          <article key={user.id}>
+            <span className="userInitials">{user.fullName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("")}</span>
+            <div className="accessUserIdentity"><strong>{user.fullName}</strong><small>{user.email}</small></div>
+            <div className="accessUserRole"><strong>{user.jobTitle || "Cargo sin asignar"}</strong><div className="userRoles">{user.roles.map((role) => <em key={`${role.code}-${role.scopeId ?? "global"}`}>{role.name}{role.scopeLabel ? ` · ${role.scopeLabel}` : ""}</em>)}</div></div>
+            <b className={`accessUserStatus ${user.active ? "active" : "inactive"}`}>{user.active ? "Activo" : "Inactivo"}</b>
+            <div className="userDirectoryActions">{canManagePlatform && <button type="button" onClick={() => openUserDetails(user)} disabled={userActionLoading}>Ver detalles</button>}</div>
+          </article>
+        ))}
+        {!loading && !visibleUsers.length && <p className="accessEmpty">{searchTerm ? "No hay usuarios que coincidan con la búsqueda." : "Aún no hay usuarios asignados en este ámbito."}</p>}
+      </section>
+
+      {createUserOpen && <div className="accessUserModalBackdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setCreateUserOpen(false); }}>
+        <section className="accessUserModal accessCreateModal" role="dialog" aria-modal="true" aria-labelledby="create-user-title">
+          <header><div><span>NUEVO ACCESO</span><h2 id="create-user-title">Crear usuario</h2><p>Define sus credenciales, cargo y permisos institucionales.</p></div><button type="button" onClick={() => setCreateUserOpen(false)} aria-label="Cerrar formulario">×</button></header>
+          <section className="accessInvitePanel">
           <form onSubmit={createManagedUser}>
-            <label>Nombre completo<input name="fullName" required minLength={5} /></label>
+            <label>Nombre completo<input ref={createUserNameRef} name="fullName" required minLength={5} /></label>
             <label>Correo institucional<input name="email" type="email" required /></label>
             <div className="accessFormGrid"><label>Contraseña inicial<input name="password" type="password" autoComplete="new-password" required minLength={12} maxLength={128} /></label><label>Confirmar contraseña<input name="passwordConfirmation" type="password" autoComplete="new-password" required minLength={12} maxLength={128} /></label></div>
             <label>Tipo de acceso<select value={roleCode} onChange={(event) => { const nextRole = event.target.value; const mayorPosition = nextRole === "sigem_alcalde" ? positions.find((position) => /^alcalde$/i.test(position.name.trim())) : null; setRoleCode(nextRole); setUnitId(""); setPositionCode(mayorPosition?.code ?? ""); }} required>{roles.map((role) => <option key={role.code} value={role.code}>{role.name}</option>)}</select></label>
@@ -660,26 +703,8 @@ export function AccessManagement() {
             <button className="accessPrimary" disabled={loading || !roleCode}>Crear usuario y asignar acceso</button>
           </form>
         </section>
-        <section className="panel accessUsersPanel">
-          <header><span>DIRECTORIO ACTIVO</span><h3>Cuentas habilitadas</h3><p>{users.length} cuenta{users.length === 1 ? "" : "s"} en tu ámbito.</p></header>
-          {loading && <p className="accessEmpty">Cargando directorio…</p>}
-          {!loading && users.map((user) => (
-            <article key={user.id}>
-              <span className="userInitials">{user.fullName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("")}</span>
-              <div>
-                <strong>{user.fullName}</strong>
-                <small>{user.jobTitle || user.email}</small>
-                <div className="userRoles">{user.roles.map((role) => <em key={`${role.code}-${role.scopeId ?? "global"}`}>{role.name}{role.scopeLabel ? ` · ${role.scopeLabel}` : ""}</em>)}</div>
-              </div>
-              <div className="userDirectoryActions">
-                <b className={user.active ? "active" : "inactive"}>{user.active ? "Activo" : "Inactivo"}</b>
-                {canManagePlatform && <button type="button" onClick={() => openUserDetails(user)} disabled={userActionLoading}>Ver y administrar</button>}
-              </div>
-            </article>
-          ))}
-          {!loading && !users.length && <p className="accessEmpty">Aún no hay usuarios asignados en este ámbito.</p>}
         </section>
-      </div>
+      </div>}
 
       {selectedUser && (
         <div className="accessUserModalBackdrop" role="presentation">

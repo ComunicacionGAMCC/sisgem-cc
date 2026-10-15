@@ -1,0 +1,170 @@
+.internalShell .accessModule { gap: 20px; }
+
+.internalShell .accessModuleHero {
+  min-height: 156px;
+  gap: 24px;
+  padding: 30px 34px;
+  background: radial-gradient(circle at 88% 0, rgba(220, 202, 92, .18), transparent 30%), linear-gradient(125deg, #fcfefa, #f1f8ee);
+}
+.internalShell .accessModuleHero .accessHeroCopy { max-width: 680px; }
+.internalShell .accessModuleHero .accessHeroCopy > span {
+  color: #377c4b;
+  font-size: 11px;
+  letter-spacing: .11em;
+}
+.internalShell .accessModuleHero h2 { margin: 8px 0 7px; font-size: clamp(1.7rem, 2.6vw, 2.25rem); }
+.internalShell .accessModuleHero p { max-width: 58ch; font-size: 14px; }
+.internalShell .accessCreateButton {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 21px;
+  border: 1px solid #1d6d3f;
+  border-radius: 13px;
+  color: white;
+  background: linear-gradient(135deg, #25814a, #145b35);
+  box-shadow: 0 12px 24px rgba(21, 91, 53, .19);
+  font-size: 14px;
+  font-weight: 760;
+  cursor: pointer;
+}
+.internalShell .accessCreateButton:hover { background: #135b35; transform: translateY(-1px); }
+.internalShell .accessCreateButton:focus-visible,
+.internalShell .accessDirectorySearch:focus-within,
+.internalShell .userDirectoryActions button:focus-visible { outline: 3px solid #a8cd70; outline-offset: 2px; }
+
+.internalShell .accessDirectoryPanel { width: 100%; min-width: 0; }
+.internalShell .accessDirectoryHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: 23px 26px;
+  background: #fff;
+}
+.internalShell .accessDirectoryHeader > div > span { color: #4f8555; font-size: 11px; }
+.internalShell .accessDirectoryHeader h3 { margin: 5px 0; font-size: 21px; font-weight: 740; }
+.internalShell .accessDirectoryHeader p { font-size: 13px; }
+.internalShell .accessDirectorySearch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(365px, 100%);
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid #d4e2d5;
+  border-radius: 12px;
+  color: #4d7558;
+  background: #f8fbf7;
+}
+.internalShell .accessDirectorySearch input {
+  width: 100%;
+  min-height: 42px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: 13px;
+}
+.internalShell .accessDirectoryColumns {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.05fr) minmax(250px, 1.45fr) 96px 122px;
+  gap: 20px;
+  padding: 12px 26px 12px 86px;
+  color: #6a7d70;
+  background: #f4f8f2;
+  font-size: 11px;
+  font-weight: 760;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.internalShell .accessDirectoryPanel > article {
+  display: grid;
+  grid-template-columns: 44px minmax(180px, 1.05fr) minmax(250px, 1.45fr) 96px 122px;
+  align-items: center;
+  gap: 20px;
+  min-height: 94px;
+  padding: 16px 26px;
+  border-top: 1px solid #e5ece5;
+  content-visibility: visible;
+}
+.internalShell .accessDirectoryPanel > article:hover { background: #fbfdf9; }
+.internalShell .accessDirectoryPanel .userInitials {
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+  font-size: 13px;
+}
+.internalShell .accessDirectoryPanel article strong { font-size: 14px; font-weight: 740; line-height: 1.4; }
+.internalShell .accessDirectoryPanel article small {
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+  color: #6e8072;
+  font-size: 12px;
+}
+.internalShell .accessDirectoryPanel .accessUserRole > strong { color: #425d49; font-size: 13px; }
+.internalShell .accessDirectoryPanel .userRoles { margin-top: 7px; gap: 6px; }
+.internalShell .accessDirectoryPanel .userRoles em {
+  max-width: 100%;
+  padding: 5px 9px;
+  border-radius: 7px;
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+.internalShell .accessDirectoryPanel .accessUserStatus {
+  justify-self: start;
+  padding: 7px 11px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 750;
+}
+.internalShell .accessDirectoryPanel .accessUserStatus.active { color: #24713e; background: #e7f4e7; }
+.internalShell .accessDirectoryPanel .accessUserStatus.inactive { color: #856b20; background: #fff3cf; }
+.internalShell .accessDirectoryPanel .userDirectoryActions { justify-items: stretch; }
+.internalShell .accessDirectoryPanel .userDirectoryActions button {
+  min-height: 36px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  color: #245d37;
+  font-size: 11px;
+  cursor: pointer;
+}
+.internalShell .accessDirectoryPanel .userDirectoryActions button:hover { background: #eef7eb; }
+
+.internalShell .accessCreateModal { width: min(700px, 100%); }
+.internalShell .accessCreateModal .accessInvitePanel { border: 0; border-radius: 0; box-shadow: none; }
+.internalShell .accessCreateModal .accessInvitePanel form { padding: 25px 28px 30px; }
+.internalShell .accessCreateModal .accessInvitePanel form > label,
+.internalShell .accessCreateModal .accessInvitePanel .accessFormGrid label { color: #3d5845; font-size: 12px; }
+.internalShell .accessCreateModal .accessInvitePanel input,
+.internalShell .accessCreateModal .accessInvitePanel select { min-height: 43px; font-size: 13px; }
+.internalShell .accessCreateModal .roleDescription { font-size: 12px; }
+.internalShell .accessCreateModal .accessPrimary { justify-self: end; font-size: 13px; cursor: pointer; }
+
+@media (max-width: 1050px) {
+  .internalShell .accessDirectoryColumns { display: none; }
+  .internalShell .accessDirectoryPanel > article {
+    grid-template-columns: 44px minmax(180px, 1fr) minmax(220px, 1.2fr) auto;
+  }
+  .internalShell .accessDirectoryPanel .accessUserStatus { grid-column: 2; }
+  .internalShell .accessDirectoryPanel .userDirectoryActions { grid-column: 4; grid-row: 1 / 3; }
+}
+@media (max-width: 740px) {
+  .internalShell .accessModuleHero { flex-direction: column; align-items: stretch; padding: 23px; }
+  .internalShell .accessCreateButton { align-self: flex-start; }
+  .internalShell .accessDirectorySearch { width: 100%; }
+  .internalShell .accessDirectoryPanel > article {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    gap: 10px 13px;
+    padding: 17px;
+  }
+  .internalShell .accessDirectoryPanel .accessUserIdentity { grid-column: 2; }
+  .internalShell .accessDirectoryPanel .accessUserRole { grid-column: 2 / 4; }
+  .internalShell .accessDirectoryPanel .accessUserStatus { grid-column: 3; grid-row: 1; }
+  .internalShell .accessDirectoryPanel .userDirectoryActions { grid-column: 2 / 4; grid-row: auto; justify-items: start; }
+}
